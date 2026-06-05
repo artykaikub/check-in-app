@@ -1,0 +1,33 @@
+{
+  "name": "check-in-app",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "workspaces": [
+    "check-in-backend",
+    "check-in-backoffice"
+  ],
+  "scripts": {
+    "dev": "pnpm --parallel --filter check-in-backend --filter check-in-backoffice dev",
+    "dev:backend": "pnpm --filter check-in-backend dev",
+    "dev:backoffice": "pnpm --filter check-in-backoffice dev",
+    "build": "pnpm -r build",
+    "start": "pnpm --filter check-in-backend start",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "codegen": "pnpm --filter check-in-backoffice codegen",
+    "vercel:dev": "vercel dev"
+  },
+  "pnpm": {
+    "overrides": {
+      "@typescript-eslint/eslint-plugin": "8.59.0",
+      "@typescript-eslint/parser": "8.59.0",
+      "@typescript-eslint/typescript-estree": "8.59.0",
+      "@typescript-eslint/visitor-keys": "8.59.0",
+      "eslint-visitor-keys": "4.2.1"
+    }
+  },
+  "engines": {
+    "node": ">=20.18.1 <23"
+  }
+}

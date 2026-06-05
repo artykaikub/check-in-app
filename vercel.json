@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm --filter check-in-backend build",
+  "devCommand": "pnpm dev:backend",
+  "installCommand": "corepack enable && pnpm install --frozen-lockfile",
+  "framework": "hono",
+  "regions": [
+    "sin1"
+  ],
+  "crons": [
+    {
+      "path": "/api/internal/retention/cleanup",
+      "schedule": "0 20 * * *"
+    }
+  ]
+}
