@@ -137,7 +137,8 @@ pnpm db:seed
 Expected success output:
 
 ```text
-Admin profile bootstrapped
+Admin profile bootstrapped and active
+missing_admin_permissions: []
 ```
 
 After this, the Auth user should have a row in `public.profiles` with the `ADMIN` role.
@@ -244,7 +245,11 @@ pnpm dev
 
 ## Vercel
 
-Deploy from the repository root. Required environment variables:
+Deploy this app as a separate Vercel project with Root Directory set to `check-in-backend`.
+
+In a monorepo deployment, this backend should be one Vercel project and `check-in-backoffice` should be another Vercel project from the same GitHub repository. Do not deploy the repository root as a third project.
+
+Required environment variables:
 
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
@@ -258,9 +263,11 @@ Deploy from the repository root. Required environment variables:
 - `INTERNAL_API_SECRET`
 - `CRON_SECRET`
 
-The root `index.ts` re-exports `check-in-backend/src/index.ts` so Vercel can detect a Hono app from the root project.
+Set `CORS_ORIGINS` to include the production backoffice URL, for example `https://check-in-backoffice.vercel.app`.
 
-The root `vercel.json` registers a daily retention cleanup cron:
+Vercel detects the Hono app from `src/index.ts`, which exports the default Hono app.
+
+`check-in-backend/vercel.json` registers a daily retention cleanup cron:
 
 ```json
 {

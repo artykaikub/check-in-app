@@ -44,6 +44,8 @@ The work area editor uses Leaflet with OpenStreetMap tiles. It does not require 
 
 Deploy this app as a separate Vercel project with root directory set to `check-in-backoffice`.
 
+In the monorepo, this backoffice should be one Vercel project and `check-in-backend` should be another Vercel project from the same GitHub repository. Do not deploy the repository root as a third project.
+
 Required environment variables:
 
 - `NEXT_PUBLIC_API_BASE_URL`: production URL of the backend Vercel project, for example `https://check-in-backend.vercel.app`

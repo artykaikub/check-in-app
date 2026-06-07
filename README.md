@@ -13,7 +13,7 @@ cp check-in-backend/.env.example check-in-backend/.env
 pnpm dev
 ```
 
-Vercel deploys the backend as a separate project from this root folder. The root `index.ts` exports the backend Hono app from `check-in-backend/src/index.ts`, matching Vercel's Hono entrypoint convention.
+Deploy the backend as a separate Vercel project with Root Directory set to `check-in-backend`. Vercel detects the Hono app from `check-in-backend/src/index.ts`.
 
 ## Backoffice
 
@@ -47,14 +47,36 @@ The work area map uses Leaflet with OpenStreetMap tiles. No paid map API key is 
 
 Use two Vercel projects from the same GitHub repository:
 
-- Backend project: Root Directory is repository root. It uses the root `vercel.json`.
+- Backend project: Root Directory is `check-in-backend`. It uses `check-in-backend/vercel.json`.
 - Backoffice project: Root Directory is `check-in-backoffice`. It uses `check-in-backoffice/vercel.json`.
 
-The backend root `vercel.json` includes a daily retention cleanup cron at `0 20 * * *` UTC, which is 03:00 Asia/Bangkok.
+Do not create a third/root Vercel project for the repository root. The repository root intentionally has no `vercel.json`; Vercel should have exactly two projects connected to this Git repository: one backend project and one backoffice project.
+
+When you push to GitHub, Vercel will create deployments for both connected projects. The backend project receives the API URL, and the backoffice project must point `NEXT_PUBLIC_API_BASE_URL` to that backend URL.
+
+The backend `check-in-backend/vercel.json` includes a daily retention cleanup cron at `0 20 * * *` UTC, which is 03:00 Asia/Bangkok.
 
 Set `CRON_SECRET` in the backend Vercel project so Vercel can call `/api/internal/retention/cleanup` securely. Manual calls may also use `INTERNAL_API_SECRET`.
 
 Apply all Supabase migrations before deploying, including the phase 9-10 hardening migration that adds a short attendance upload window separate from 90-day retention.
+
+Backend Vercel env vars:
+
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SECRET_KEY`
+- `CORS_ORIGINS`
+- `LOG_LEVEL`
+- `RATE_LIMIT_POINTS`
+- `RATE_LIMIT_DURATION_SECONDS`
+- `ATTENDANCE_PHOTO_BUCKET`
+- `SALARY_UPLOAD_BUCKET`
+- `INTERNAL_API_SECRET`
+- `CRON_SECRET`
+
+Backoffice Vercel env vars:
+
+- `NEXT_PUBLIC_API_BASE_URL`
 
 ## Scripts
 
@@ -91,7 +113,8 @@ pnpm db:seed
 Expected seed success output:
 
 ```text
-Admin profile bootstrapped
+Admin profile bootstrapped and active
+missing_admin_permissions: []
 ```
 
 For the full explanation, see `check-in-backend/README.md`.
