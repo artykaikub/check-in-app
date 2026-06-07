@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -15,9 +16,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { setStoredSession } from '@/lib/api/session'
+import { useI18n } from '@/lib/i18n'
 import { signIn } from './auth-api'
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage(error: unknown, fallback: string) {
   if (
     typeof error === 'object' &&
     error !== null &&
@@ -34,11 +36,12 @@ function getErrorMessage(error: unknown) {
     return error.message
   }
 
-  return 'Sign in failed'
+  return fallback
 }
 
 export function LoginForm() {
   const router = useRouter()
+  const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
@@ -49,21 +52,26 @@ export function LoginForm() {
         return
       }
 
+      toast.success(t('auth.toastSignedIn'))
       setStoredSession({
         accessToken: response.session.accessToken,
         refreshToken: response.session.refreshToken
       })
       router.replace('/dashboard')
-    }
+    },
+    onError: (error) =>
+      toast.error(t('auth.signInFailed'), {
+        description: getErrorMessage(error, t('auth.signInFailed'))
+      })
   })
 
-  const errorMessage = getErrorMessage(mutation.error)
+  const errorMessage = getErrorMessage(mutation.error, t('auth.signInFailed'))
 
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle>Backoffice</CardTitle>
-        <CardDescription>Sign in with your team account.</CardDescription>
+        <CardTitle>{t('auth.title')}</CardTitle>
+        <CardDescription>{t('auth.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -74,7 +82,7 @@ export function LoginForm() {
           }}
         >
           <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('auth.email')}</Label>
             <Input
               id="email"
               type="email"
@@ -85,7 +93,7 @@ export function LoginForm() {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t('auth.password')}</Label>
             <Input
               id="password"
               type="password"
@@ -102,7 +110,7 @@ export function LoginForm() {
 
           <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-            Sign in
+            {t('auth.signIn')}
           </Button>
         </form>
       </CardContent>

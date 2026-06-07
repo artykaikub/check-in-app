@@ -16,6 +16,11 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "codegen": "pnpm --filter check-in-backoffice codegen",
+    "db:link": "pnpm --filter check-in-backend db:link",
+    "db:push": "pnpm --filter check-in-backend db:push",
+    "db:seed": "pnpm --filter check-in-backend db:seed",
+    "db:push:seed": "pnpm --filter check-in-backend db:push:seed",
+    "db:reset": "pnpm --filter check-in-backend db:reset",
     "vercel:dev": "vercel dev"
   },
   "pnpm": {

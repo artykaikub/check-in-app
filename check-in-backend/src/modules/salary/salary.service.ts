@@ -60,6 +60,13 @@ type SalaryImportRow = {
   note?: unknown
 }
 
+type SalaryImportError = {
+  row: number | null
+  column: string | null
+  value?: string | null
+  message: string
+}
+
 const batchSelect =
   'id,uploaded_by,storage_path,original_file_name,status,total_rows,success_rows,error_rows,errors,imported_at,created_at'
 const recordSelect =
@@ -126,6 +133,47 @@ function toMoney(value: unknown) {
   return numeric
 }
 
+function formatImportValue(value: unknown) {
+  const stringValue = toStringValue(value)
+  return stringValue ?? null
+}
+
+function parseRequiredMoneyColumn(
+  row: SalaryImportRow,
+  column: keyof Pick<
+    SalaryImportRow,
+    'base_salary' | 'allowance' | 'deduction' | 'net_salary' | 'accumulated_salary'
+  >,
+  rowNumber: number,
+  errors: SalaryImportError[]
+) {
+  const rawValue = row[column]
+
+  if (rawValue === undefined || rawValue === null || rawValue === '') {
+    errors.push({
+      row: rowNumber,
+      column,
+      value: null,
+      message: `${column} is required and must be a number greater than or equal to 0`
+    })
+    return null
+  }
+
+  const money = toMoney(rawValue)
+
+  if (money === null) {
+    errors.push({
+      row: rowNumber,
+      column,
+      value: formatImportValue(rawValue),
+      message: `${column} must be a number greater than or equal to 0`
+    })
+    return null
+  }
+
+  return money
+}
+
 function parsePeriodMonth(value: unknown) {
   if (value instanceof Date) {
     return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}`
@@ -188,6 +236,25 @@ async function getBatch(uploadBatchId: string) {
   }
 
   return data as SalaryUploadBatchRow
+}
+
+async function getSalaryRecord(salaryRecordId: string) {
+  const supabaseAdmin = requireSupabaseAdmin()
+  const { data, error } = await supabaseAdmin
+    .from('salary_records')
+    .select(recordSelect)
+    .eq('id', salaryRecordId)
+    .maybeSingle()
+
+  if (error) {
+    throw badRequest(error.message)
+  }
+
+  if (!data) {
+    throw notFound('Salary record was not found')
+  }
+
+  return data as SalaryRecordRow
 }
 
 async function updateBatch(uploadBatchId: string, values: Record<string, unknown>) {
@@ -287,7 +354,10 @@ export async function importSalaryUpload(input: {
     return { uploadBatch: mapBatch(failedBatch) }
   }
 
-  const sheet = workbook.Sheets[firstSheetName]
+  const salarySheetName =
+    workbook.SheetNames.find((sheetName) => sheetName.trim().toLowerCase() === 'salary_records') ??
+    firstSheetName
+  const sheet = workbook.Sheets[salarySheetName]
 
   if (!sheet) {
     const failedBatch = await updateBatch(input.uploadBatchId, {
@@ -307,47 +377,93 @@ export async function importSalaryUpload(input: {
       Object.entries(row).map(([key, value]) => [normalizeHeader(key), value])
     ) as SalaryImportRow
   )
-  const errors: Array<{ row: number; message: string }> = []
+
+  if (normalizedRows.length === 0) {
+    const failedBatch = await updateBatch(input.uploadBatchId, {
+      status: 'FAILED',
+      total_rows: 0,
+      success_rows: 0,
+      error_rows: 1,
+      errors: [{ row: null, message: 'No salary rows found in salary_records worksheet' }],
+      imported_at: new Date().toISOString()
+    })
+    return { uploadBatch: mapBatch(failedBatch) }
+  }
+
+  const errors: SalaryImportError[] = []
   let successRows = 0
 
   for (const [index, row] of normalizedRows.entries()) {
     const rowNumber = index + 2
+    const rowErrors: SalaryImportError[] = []
+    const employeeCode = toStringValue(row.employee_code)
+    const employeeEmail = toStringValue(row.employee_email)?.toLowerCase() ?? null
     const profile = await findProfile(row)
     const periodMonth = parsePeriodMonth(row.period_month)
-    const baseSalary = toMoney(row.base_salary)
-    const allowance = toMoney(row.allowance)
-    const deduction = toMoney(row.deduction)
-    const netSalary = toMoney(row.net_salary)
-    const accumulatedSalary = toMoney(row.accumulated_salary)
+    const baseSalary = parseRequiredMoneyColumn(row, 'base_salary', rowNumber, rowErrors)
+    const allowance = parseRequiredMoneyColumn(row, 'allowance', rowNumber, rowErrors)
+    const deduction = parseRequiredMoneyColumn(row, 'deduction', rowNumber, rowErrors)
+    const netSalary = parseRequiredMoneyColumn(row, 'net_salary', rowNumber, rowErrors)
+    const accumulatedSalary = parseRequiredMoneyColumn(
+      row,
+      'accumulated_salary',
+      rowNumber,
+      rowErrors
+    )
 
-    if (!profile) {
-      errors.push({ row: rowNumber, message: 'Employee was not found by employee_code or employee_email' })
-      continue
+    if (!employeeCode && !employeeEmail) {
+      rowErrors.push({
+        row: rowNumber,
+        column: 'employee_code',
+        value: null,
+        message: 'employee_code or employee_email is required to find the employee'
+      })
+    } else if (!profile) {
+      if (employeeCode && employeeEmail) {
+        rowErrors.push({
+          row: rowNumber,
+          column: 'employee_code, employee_email',
+          value: `${employeeCode}, ${employeeEmail}`,
+          message: 'No user profile matches this employee_code or employee_email'
+        })
+      } else if (employeeCode) {
+        rowErrors.push({
+          row: rowNumber,
+          column: 'employee_code',
+          value: employeeCode,
+          message: 'Employee code does not match any user profile in the system'
+        })
+      } else {
+        rowErrors.push({
+          row: rowNumber,
+          column: 'employee_email',
+          value: employeeEmail,
+          message: 'Employee email does not match any user profile in the system'
+        })
+      }
     }
 
     if (!periodMonth) {
-      errors.push({ row: rowNumber, message: 'period_month must use YYYY-MM format' })
-      continue
+      rowErrors.push({
+        row: rowNumber,
+        column: 'period_month',
+        value: formatImportValue(row.period_month),
+        message: 'period_month is required and must use YYYY-MM format, for example 2026-06'
+      })
     }
 
-    if (
-      baseSalary === null ||
-      allowance === null ||
-      deduction === null ||
-      netSalary === null ||
-      accumulatedSalary === null
-    ) {
-      errors.push({ row: rowNumber, message: 'Salary amount columns must be numbers greater than or equal to 0' })
+    if (rowErrors.length > 0) {
+      errors.push(...rowErrors)
       continue
     }
 
     const { error } = await supabaseAdmin.from('salary_records').upsert(
       {
         upload_batch_id: input.uploadBatchId,
-        user_id: profile.id,
-        employee_code: toStringValue(row.employee_code) ?? profile.employee_code,
-        employee_email: toStringValue(row.employee_email)?.toLowerCase() ?? profile.email,
-        period_month: periodMonth,
+        user_id: profile!.id,
+        employee_code: employeeCode ?? profile!.employee_code,
+        employee_email: employeeEmail ?? profile!.email,
+        period_month: periodMonth!,
         base_salary: baseSalary,
         allowance,
         deduction,
@@ -359,7 +475,7 @@ export async function importSalaryUpload(input: {
     )
 
     if (error) {
-      errors.push({ row: rowNumber, message: error.message })
+      errors.push({ row: rowNumber, column: null, message: error.message })
       continue
     }
 
@@ -448,5 +564,95 @@ export async function listSalaryRecords(query: ListSalaryRecordsQuery) {
     page: query.page,
     perPage: query.perPage,
     total: count ?? 0
+  }
+}
+
+export async function deleteSalaryUpload(input: {
+  uploadBatchId: string
+  deletedBy: string
+  c?: Context<AppEnv> | undefined
+}) {
+  const supabaseAdmin = requireSupabaseAdmin()
+  const batch = await getBatch(input.uploadBatchId)
+
+  const { count: salaryRecordCount, error: countError } = await supabaseAdmin
+    .from('salary_records')
+    .select('id', { count: 'exact', head: true })
+    .eq('upload_batch_id', input.uploadBatchId)
+
+  if (countError) {
+    throw badRequest(countError.message)
+  }
+
+  const { error: deleteError } = await supabaseAdmin
+    .from('salary_upload_batches')
+    .delete()
+    .eq('id', input.uploadBatchId)
+
+  if (deleteError) {
+    throw badRequest(deleteError.message)
+  }
+
+  const { error: storageError } = await supabaseAdmin.storage
+    .from(env.SALARY_UPLOAD_BUCKET)
+    .remove([batch.storage_path])
+
+  await writeAuditLog({
+    actorUserId: input.deletedBy,
+    action: 'salary.upload.delete',
+    resourceType: 'salary_upload_batch',
+    resourceId: input.uploadBatchId,
+    metadata: {
+      originalFileName: batch.original_file_name,
+      storagePath: batch.storage_path,
+      deletedSalaryRecords: salaryRecordCount ?? 0,
+      storageDeleted: !storageError,
+      storageError: storageError?.message ?? null
+    },
+    c: input.c
+  })
+
+  return {
+    deletedUploadBatchId: input.uploadBatchId,
+    deletedSalaryRecords: salaryRecordCount ?? 0
+  }
+}
+
+export async function deleteSalaryRecord(input: {
+  salaryRecordId: string
+  deletedBy: string
+  c?: Context<AppEnv> | undefined
+}) {
+  const supabaseAdmin = requireSupabaseAdmin()
+  const salaryRecord = await getSalaryRecord(input.salaryRecordId)
+
+  const { error } = await supabaseAdmin
+    .from('salary_records')
+    .delete()
+    .eq('id', input.salaryRecordId)
+
+  if (error) {
+    throw badRequest(error.message)
+  }
+
+  await writeAuditLog({
+    actorUserId: input.deletedBy,
+    action: 'salary.record.delete',
+    resourceType: 'salary_record',
+    resourceId: input.salaryRecordId,
+    metadata: {
+      uploadBatchId: salaryRecord.upload_batch_id,
+      userId: salaryRecord.user_id,
+      employeeCode: salaryRecord.employee_code,
+      employeeEmail: salaryRecord.employee_email,
+      periodMonth: salaryRecord.period_month,
+      netSalary: Number(salaryRecord.net_salary)
+    },
+    c: input.c
+  })
+
+  return {
+    deletedSalaryRecordId: input.salaryRecordId,
+    uploadBatchId: salaryRecord.upload_batch_id
   }
 }

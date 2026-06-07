@@ -1,15 +1,13 @@
-import { DashboardShell } from '@/components/layout/dashboard-shell'
+import { PageHeading } from '@/components/layout/page-heading'
 import { WorkAreasPage } from '@/features/work-areas/work-areas-page'
 
 export default function DashboardWorkAreasPage() {
   return (
-    <DashboardShell>
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Work areas</h1>
-        </div>
-        <WorkAreasPage />
+    <div className="flex flex-col gap-6">
+      <div>
+        <PageHeading titleKey="workAreas.title" />
       </div>
-    </DashboardShell>
+      <WorkAreasPage />
+    </div>
   )
 }

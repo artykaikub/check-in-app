@@ -1,15 +1,13 @@
-import { DashboardShell } from '@/components/layout/dashboard-shell'
+import { PageHeading } from '@/components/layout/page-heading'
 import { AttendancePage } from '@/features/attendance/attendance-page'
 
 export default function DashboardAttendancePage() {
   return (
-    <DashboardShell>
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Attendance</h1>
-        </div>
-        <AttendancePage />
+    <div className="flex flex-col gap-6">
+      <div>
+        <PageHeading titleKey="attendance.title" />
       </div>
-    </DashboardShell>
+      <AttendancePage />
+    </div>
   )
 }

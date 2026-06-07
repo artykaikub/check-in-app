@@ -26,10 +26,13 @@ import type {
 
 import type {
   AttendanceDayResponse,
-  BackofficeProfileResponse,
+  BackofficeUserResponse,
+  CreateBackofficeUserRequest,
   CreateSalaryUploadUrlRequest,
   CreateSalaryUploadUrlResponse,
   CreateWorkLocationRequest,
+  DeleteSalaryRecordResponse,
+  DeleteSalaryUploadResponse,
   EmergencyLogResponse,
   EmployeeWorkAreaResponse,
   ErrorResponse,
@@ -38,9 +41,13 @@ import type {
   ImportSalaryResponse,
   ListAttendanceParams,
   ListAttendanceResponse,
+  ListAuditLogsParams,
+  ListAuditLogsResponse,
   ListBackofficeUsersParams,
   ListEmergencyLogsParams,
   ListEmergencyLogsResponse,
+  ListEventLogsParams,
+  ListEventLogsResponse,
   ListPermissionsResponse,
   ListRolesResponse,
   ListSalaryRecordsParams,
@@ -53,107 +60,16 @@ import type {
   ResetDeviceResponse,
   ReviewAttendanceRequest,
   SetEmployeeWorkAreaRequest,
+  SetUserPermissionOverridesRequest,
+  UpdateBackofficeUserRequest,
   UpdateEmergencyLogRequest,
   UpdateWorkLocationRequest,
+  UserEffectivePermissionsResponse,
+  UserPermissionOverridesResponse,
   WorkLocationResponse
 } from '.././model';
 
 
-
-
-
-export const getGetBackofficeProfileUrl = () => {
-
-
-  
-
-  return `/api/backoffice/profile`
-}
-
-export const getBackofficeProfile = async ( options?: RequestInit): Promise<BackofficeProfileResponse> => {
-  
-  const res = await fetch(getGetBackofficeProfileUrl(),
-  {      
-    ...options,
-    method: 'GET'
-    
-    
-  }
-)
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-  
-  const data: BackofficeProfileResponse = body ? JSON.parse(body) : {}
-  return data
-}
-
-
-
-export const getGetBackofficeProfileQueryKey = () => {
-    return [`/api/backoffice/profile`] as const;
-    }
-
-    
-export const getGetBackofficeProfileQueryOptions = <TData = Awaited<ReturnType<typeof getBackofficeProfile>>, TError = ErrorResponse | ErrorResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBackofficeProfile>>, TError, TData>>, fetch?: RequestInit}
-) => {
-
-const {query: queryOptions, fetch: fetchOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetBackofficeProfileQueryKey();
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBackofficeProfile>>> = ({ signal }) => getBackofficeProfile({ ...(signal ? { signal } : {}), ...fetchOptions });
-
-      
-
-      
-
-   return  { queryKey, queryFn,   staleTime: 30000, refetchOnWindowFocus: false,  ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBackofficeProfile>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetBackofficeProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getBackofficeProfile>>>
-export type GetBackofficeProfileQueryError = ErrorResponse | ErrorResponse
-
-
-export function useGetBackofficeProfile<TData = Awaited<ReturnType<typeof getBackofficeProfile>>, TError = ErrorResponse | ErrorResponse>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBackofficeProfile>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getBackofficeProfile>>,
-          TError,
-          Awaited<ReturnType<typeof getBackofficeProfile>>
-        > , 'initialData'
-      >, fetch?: RequestInit}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetBackofficeProfile<TData = Awaited<ReturnType<typeof getBackofficeProfile>>, TError = ErrorResponse | ErrorResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBackofficeProfile>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getBackofficeProfile>>,
-          TError,
-          Awaited<ReturnType<typeof getBackofficeProfile>>
-        > , 'initialData'
-      >, fetch?: RequestInit}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetBackofficeProfile<TData = Awaited<ReturnType<typeof getBackofficeProfile>>, TError = ErrorResponse | ErrorResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBackofficeProfile>>, TError, TData>>, fetch?: RequestInit}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useGetBackofficeProfile<TData = Awaited<ReturnType<typeof getBackofficeProfile>>, TError = ErrorResponse | ErrorResponse>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBackofficeProfile>>, TError, TData>>, fetch?: RequestInit}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getGetBackofficeProfileQueryOptions(options)
-
-  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
-}
 
 
 
@@ -259,7 +175,150 @@ export function useListBackofficeUsers<TData = Awaited<ReturnType<typeof listBac
 
 
 
-export const getListRolesUrl = () => {
+export const getCreateBackofficeUserUrl = () => {
+
+
+  
+
+  return `/api/backoffice/users`
+}
+
+export const createBackofficeUser = async (createBackofficeUserRequest: CreateBackofficeUserRequest, options?: RequestInit): Promise<BackofficeUserResponse> => {
+  
+  const res = await fetch(getCreateBackofficeUserUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createBackofficeUserRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: BackofficeUserResponse = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+
+
+export const getCreateBackofficeUserMutationOptions = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBackofficeUser>>, TError,{data: CreateBackofficeUserRequest}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof createBackofficeUser>>, TError,{data: CreateBackofficeUserRequest}, TContext> => {
+
+const mutationKey = ['createBackofficeUser'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBackofficeUser>>, {data: CreateBackofficeUserRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBackofficeUser(data,fetchOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBackofficeUserMutationResult = NonNullable<Awaited<ReturnType<typeof createBackofficeUser>>>
+    export type CreateBackofficeUserMutationBody = CreateBackofficeUserRequest
+    export type CreateBackofficeUserMutationError = ErrorResponse | ErrorResponse
+
+    export const useCreateBackofficeUser = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBackofficeUser>>, TError,{data: CreateBackofficeUserRequest}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createBackofficeUser>>,
+        TError,
+        {data: CreateBackofficeUserRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateBackofficeUserMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    export const getUpdateBackofficeUserUrl = (userId: string,) => {
+
+
+  
+
+  return `/api/backoffice/users/${userId}`
+}
+
+export const updateBackofficeUser = async (userId: string,
+    updateBackofficeUserRequest: UpdateBackofficeUserRequest, options?: RequestInit): Promise<BackofficeUserResponse> => {
+  
+  const res = await fetch(getUpdateBackofficeUserUrl(userId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateBackofficeUserRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: BackofficeUserResponse = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+
+
+export const getUpdateBackofficeUserMutationOptions = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBackofficeUser>>, TError,{userId: string;data: UpdateBackofficeUserRequest}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof updateBackofficeUser>>, TError,{userId: string;data: UpdateBackofficeUserRequest}, TContext> => {
+
+const mutationKey = ['updateBackofficeUser'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateBackofficeUser>>, {userId: string;data: UpdateBackofficeUserRequest}> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  updateBackofficeUser(userId,data,fetchOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateBackofficeUserMutationResult = NonNullable<Awaited<ReturnType<typeof updateBackofficeUser>>>
+    export type UpdateBackofficeUserMutationBody = UpdateBackofficeUserRequest
+    export type UpdateBackofficeUserMutationError = ErrorResponse | ErrorResponse
+
+    export const useUpdateBackofficeUser = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBackofficeUser>>, TError,{userId: string;data: UpdateBackofficeUserRequest}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateBackofficeUser>>,
+        TError,
+        {userId: string;data: UpdateBackofficeUserRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getUpdateBackofficeUserMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    export const getListRolesUrl = () => {
 
 
   
@@ -534,6 +593,268 @@ export function useGetUserDevice<TData = Awaited<ReturnType<typeof getUserDevice
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetUserDeviceQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+export const getGetUserPermissionOverridesUrl = (userId: string,) => {
+
+
+  
+
+  return `/api/backoffice/users/${userId}/permissions`
+}
+
+export const getUserPermissionOverrides = async (userId: string, options?: RequestInit): Promise<UserPermissionOverridesResponse> => {
+  
+  const res = await fetch(getGetUserPermissionOverridesUrl(userId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: UserPermissionOverridesResponse = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+
+export const getGetUserPermissionOverridesQueryKey = (userId?: string,) => {
+    return [`/api/backoffice/users/${userId}/permissions`] as const;
+    }
+
+    
+export const getGetUserPermissionOverridesQueryOptions = <TData = Awaited<ReturnType<typeof getUserPermissionOverrides>>, TError = ErrorResponse | ErrorResponse>(userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserPermissionOverrides>>, TError, TData>>, fetch?: RequestInit}
+) => {
+
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUserPermissionOverridesQueryKey(userId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserPermissionOverrides>>> = ({ signal }) => getUserPermissionOverrides(userId, { ...(signal ? { signal } : {}), ...fetchOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(userId),  staleTime: 30000, refetchOnWindowFocus: false,  ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUserPermissionOverrides>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetUserPermissionOverridesQueryResult = NonNullable<Awaited<ReturnType<typeof getUserPermissionOverrides>>>
+export type GetUserPermissionOverridesQueryError = ErrorResponse | ErrorResponse
+
+
+export function useGetUserPermissionOverrides<TData = Awaited<ReturnType<typeof getUserPermissionOverrides>>, TError = ErrorResponse | ErrorResponse>(
+ userId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserPermissionOverrides>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserPermissionOverrides>>,
+          TError,
+          Awaited<ReturnType<typeof getUserPermissionOverrides>>
+        > , 'initialData'
+      >, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUserPermissionOverrides<TData = Awaited<ReturnType<typeof getUserPermissionOverrides>>, TError = ErrorResponse | ErrorResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserPermissionOverrides>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserPermissionOverrides>>,
+          TError,
+          Awaited<ReturnType<typeof getUserPermissionOverrides>>
+        > , 'initialData'
+      >, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUserPermissionOverrides<TData = Awaited<ReturnType<typeof getUserPermissionOverrides>>, TError = ErrorResponse | ErrorResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserPermissionOverrides>>, TError, TData>>, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetUserPermissionOverrides<TData = Awaited<ReturnType<typeof getUserPermissionOverrides>>, TError = ErrorResponse | ErrorResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserPermissionOverrides>>, TError, TData>>, fetch?: RequestInit}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetUserPermissionOverridesQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+export const getSetUserPermissionOverridesUrl = (userId: string,) => {
+
+
+  
+
+  return `/api/backoffice/users/${userId}/permissions`
+}
+
+export const setUserPermissionOverrides = async (userId: string,
+    setUserPermissionOverridesRequest: SetUserPermissionOverridesRequest, options?: RequestInit): Promise<UserPermissionOverridesResponse> => {
+  
+  const res = await fetch(getSetUserPermissionOverridesUrl(userId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      setUserPermissionOverridesRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: UserPermissionOverridesResponse = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+
+
+export const getSetUserPermissionOverridesMutationOptions = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setUserPermissionOverrides>>, TError,{userId: string;data: SetUserPermissionOverridesRequest}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof setUserPermissionOverrides>>, TError,{userId: string;data: SetUserPermissionOverridesRequest}, TContext> => {
+
+const mutationKey = ['setUserPermissionOverrides'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setUserPermissionOverrides>>, {userId: string;data: SetUserPermissionOverridesRequest}> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  setUserPermissionOverrides(userId,data,fetchOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetUserPermissionOverridesMutationResult = NonNullable<Awaited<ReturnType<typeof setUserPermissionOverrides>>>
+    export type SetUserPermissionOverridesMutationBody = SetUserPermissionOverridesRequest
+    export type SetUserPermissionOverridesMutationError = ErrorResponse | ErrorResponse
+
+    export const useSetUserPermissionOverrides = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setUserPermissionOverrides>>, TError,{userId: string;data: SetUserPermissionOverridesRequest}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof setUserPermissionOverrides>>,
+        TError,
+        {userId: string;data: SetUserPermissionOverridesRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getSetUserPermissionOverridesMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    export const getGetUserEffectivePermissionsUrl = (userId: string,) => {
+
+
+  
+
+  return `/api/backoffice/users/${userId}/effective-permissions`
+}
+
+export const getUserEffectivePermissions = async (userId: string, options?: RequestInit): Promise<UserEffectivePermissionsResponse> => {
+  
+  const res = await fetch(getGetUserEffectivePermissionsUrl(userId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: UserEffectivePermissionsResponse = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+
+export const getGetUserEffectivePermissionsQueryKey = (userId?: string,) => {
+    return [`/api/backoffice/users/${userId}/effective-permissions`] as const;
+    }
+
+    
+export const getGetUserEffectivePermissionsQueryOptions = <TData = Awaited<ReturnType<typeof getUserEffectivePermissions>>, TError = ErrorResponse | ErrorResponse>(userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserEffectivePermissions>>, TError, TData>>, fetch?: RequestInit}
+) => {
+
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUserEffectivePermissionsQueryKey(userId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserEffectivePermissions>>> = ({ signal }) => getUserEffectivePermissions(userId, { ...(signal ? { signal } : {}), ...fetchOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(userId),  staleTime: 30000, refetchOnWindowFocus: false,  ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUserEffectivePermissions>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetUserEffectivePermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof getUserEffectivePermissions>>>
+export type GetUserEffectivePermissionsQueryError = ErrorResponse | ErrorResponse
+
+
+export function useGetUserEffectivePermissions<TData = Awaited<ReturnType<typeof getUserEffectivePermissions>>, TError = ErrorResponse | ErrorResponse>(
+ userId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserEffectivePermissions>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserEffectivePermissions>>,
+          TError,
+          Awaited<ReturnType<typeof getUserEffectivePermissions>>
+        > , 'initialData'
+      >, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUserEffectivePermissions<TData = Awaited<ReturnType<typeof getUserEffectivePermissions>>, TError = ErrorResponse | ErrorResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserEffectivePermissions>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUserEffectivePermissions>>,
+          TError,
+          Awaited<ReturnType<typeof getUserEffectivePermissions>>
+        > , 'initialData'
+      >, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUserEffectivePermissions<TData = Awaited<ReturnType<typeof getUserEffectivePermissions>>, TError = ErrorResponse | ErrorResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserEffectivePermissions>>, TError, TData>>, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetUserEffectivePermissions<TData = Awaited<ReturnType<typeof getUserEffectivePermissions>>, TError = ErrorResponse | ErrorResponse>(
+ userId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUserEffectivePermissions>>, TError, TData>>, fetch?: RequestInit}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetUserEffectivePermissionsQueryOptions(userId,options)
 
   const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -1803,7 +2124,77 @@ export function useListSalaryUploads<TData = Awaited<ReturnType<typeof listSalar
 
 
 
-export const getListSalaryRecordsUrl = (params?: ListSalaryRecordsParams,) => {
+export const getDeleteSalaryUploadUrl = (uploadBatchId: string,) => {
+
+
+  
+
+  return `/api/backoffice/salary/uploads/${uploadBatchId}`
+}
+
+export const deleteSalaryUpload = async (uploadBatchId: string, options?: RequestInit): Promise<DeleteSalaryUploadResponse> => {
+  
+  const res = await fetch(getDeleteSalaryUploadUrl(uploadBatchId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: DeleteSalaryUploadResponse = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+
+
+export const getDeleteSalaryUploadMutationOptions = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSalaryUpload>>, TError,{uploadBatchId: string}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSalaryUpload>>, TError,{uploadBatchId: string}, TContext> => {
+
+const mutationKey = ['deleteSalaryUpload'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSalaryUpload>>, {uploadBatchId: string}> = (props) => {
+          const {uploadBatchId} = props ?? {};
+
+          return  deleteSalaryUpload(uploadBatchId,fetchOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSalaryUploadMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSalaryUpload>>>
+    
+    export type DeleteSalaryUploadMutationError = ErrorResponse | ErrorResponse
+
+    export const useDeleteSalaryUpload = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSalaryUpload>>, TError,{uploadBatchId: string}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSalaryUpload>>,
+        TError,
+        {uploadBatchId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteSalaryUploadMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    export const getListSalaryRecordsUrl = (params?: ListSalaryRecordsParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -1895,6 +2286,280 @@ export function useListSalaryRecords<TData = Awaited<ReturnType<typeof listSalar
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListSalaryRecordsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+export const getDeleteSalaryRecordUrl = (salaryRecordId: string,) => {
+
+
+  
+
+  return `/api/backoffice/salary/records/${salaryRecordId}`
+}
+
+export const deleteSalaryRecord = async (salaryRecordId: string, options?: RequestInit): Promise<DeleteSalaryRecordResponse> => {
+  
+  const res = await fetch(getDeleteSalaryRecordUrl(salaryRecordId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: DeleteSalaryRecordResponse = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+
+
+export const getDeleteSalaryRecordMutationOptions = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSalaryRecord>>, TError,{salaryRecordId: string}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSalaryRecord>>, TError,{salaryRecordId: string}, TContext> => {
+
+const mutationKey = ['deleteSalaryRecord'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSalaryRecord>>, {salaryRecordId: string}> = (props) => {
+          const {salaryRecordId} = props ?? {};
+
+          return  deleteSalaryRecord(salaryRecordId,fetchOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSalaryRecordMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSalaryRecord>>>
+    
+    export type DeleteSalaryRecordMutationError = ErrorResponse | ErrorResponse
+
+    export const useDeleteSalaryRecord = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSalaryRecord>>, TError,{salaryRecordId: string}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSalaryRecord>>,
+        TError,
+        {salaryRecordId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteSalaryRecordMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    export const getListAuditLogsUrl = (params?: ListAuditLogsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/backoffice/audit-logs?${stringifiedParams}` : `/api/backoffice/audit-logs`
+}
+
+export const listAuditLogs = async (params?: ListAuditLogsParams, options?: RequestInit): Promise<ListAuditLogsResponse> => {
+  
+  const res = await fetch(getListAuditLogsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: ListAuditLogsResponse = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+
+export const getListAuditLogsQueryKey = (params?: ListAuditLogsParams,) => {
+    return [`/api/backoffice/audit-logs`, ...(params ? [params]: [])] as const;
+    }
+
+    
+export const getListAuditLogsQueryOptions = <TData = Awaited<ReturnType<typeof listAuditLogs>>, TError = ErrorResponse | ErrorResponse>(params?: ListAuditLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData>>, fetch?: RequestInit}
+) => {
+
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAuditLogsQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAuditLogs>>> = ({ signal }) => listAuditLogs(params, { ...(signal ? { signal } : {}), ...fetchOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn,   staleTime: 30000, refetchOnWindowFocus: false,  ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAuditLogsQueryResult = NonNullable<Awaited<ReturnType<typeof listAuditLogs>>>
+export type ListAuditLogsQueryError = ErrorResponse | ErrorResponse
+
+
+export function useListAuditLogs<TData = Awaited<ReturnType<typeof listAuditLogs>>, TError = ErrorResponse | ErrorResponse>(
+ params: undefined |  ListAuditLogsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAuditLogs>>,
+          TError,
+          Awaited<ReturnType<typeof listAuditLogs>>
+        > , 'initialData'
+      >, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAuditLogs<TData = Awaited<ReturnType<typeof listAuditLogs>>, TError = ErrorResponse | ErrorResponse>(
+ params?: ListAuditLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAuditLogs>>,
+          TError,
+          Awaited<ReturnType<typeof listAuditLogs>>
+        > , 'initialData'
+      >, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAuditLogs<TData = Awaited<ReturnType<typeof listAuditLogs>>, TError = ErrorResponse | ErrorResponse>(
+ params?: ListAuditLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData>>, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListAuditLogs<TData = Awaited<ReturnType<typeof listAuditLogs>>, TError = ErrorResponse | ErrorResponse>(
+ params?: ListAuditLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData>>, fetch?: RequestInit}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAuditLogsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+export const getListEventLogsUrl = (params?: ListEventLogsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/backoffice/event-logs?${stringifiedParams}` : `/api/backoffice/event-logs`
+}
+
+export const listEventLogs = async (params?: ListEventLogsParams, options?: RequestInit): Promise<ListEventLogsResponse> => {
+  
+  const res = await fetch(getListEventLogsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: ListEventLogsResponse = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+
+export const getListEventLogsQueryKey = (params?: ListEventLogsParams,) => {
+    return [`/api/backoffice/event-logs`, ...(params ? [params]: [])] as const;
+    }
+
+    
+export const getListEventLogsQueryOptions = <TData = Awaited<ReturnType<typeof listEventLogs>>, TError = ErrorResponse | ErrorResponse>(params?: ListEventLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEventLogs>>, TError, TData>>, fetch?: RequestInit}
+) => {
+
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEventLogsQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEventLogs>>> = ({ signal }) => listEventLogs(params, { ...(signal ? { signal } : {}), ...fetchOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn,   staleTime: 30000, refetchOnWindowFocus: false,  ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEventLogs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListEventLogsQueryResult = NonNullable<Awaited<ReturnType<typeof listEventLogs>>>
+export type ListEventLogsQueryError = ErrorResponse | ErrorResponse
+
+
+export function useListEventLogs<TData = Awaited<ReturnType<typeof listEventLogs>>, TError = ErrorResponse | ErrorResponse>(
+ params: undefined |  ListEventLogsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEventLogs>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEventLogs>>,
+          TError,
+          Awaited<ReturnType<typeof listEventLogs>>
+        > , 'initialData'
+      >, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEventLogs<TData = Awaited<ReturnType<typeof listEventLogs>>, TError = ErrorResponse | ErrorResponse>(
+ params?: ListEventLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEventLogs>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEventLogs>>,
+          TError,
+          Awaited<ReturnType<typeof listEventLogs>>
+        > , 'initialData'
+      >, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEventLogs<TData = Awaited<ReturnType<typeof listEventLogs>>, TError = ErrorResponse | ErrorResponse>(
+ params?: ListEventLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEventLogs>>, TError, TData>>, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListEventLogs<TData = Awaited<ReturnType<typeof listEventLogs>>, TError = ErrorResponse | ErrorResponse>(
+ params?: ListEventLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEventLogs>>, TError, TData>>, fetch?: RequestInit}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListEventLogsQueryOptions(params,options)
 
   const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

@@ -23,6 +23,7 @@ type PhotoUploadRow = {
   content_type: string
   status: 'PENDING' | 'COMPLETED' | 'CANCELLED'
   expires_at: string
+  upload_expires_at: string
 }
 
 type EmployeeWorkAreaRow = {
@@ -52,6 +53,13 @@ type AttendanceEventRow = {
   created_at: string
 }
 
+type AttendanceProfileRow = {
+  id: string
+  email: string | null
+  full_name: string | null
+  employee_code: string | null
+}
+
 type AttendanceDayRow = {
   id: string
   user_id: string
@@ -61,7 +69,12 @@ type AttendanceDayRow = {
   review_status: 'PENDING' | 'APPROVED' | 'REJECTED'
   review_note: string | null
   created_at: string
+  user?: AttendanceProfileRow | AttendanceProfileRow[] | null
+  profiles?: AttendanceProfileRow | AttendanceProfileRow[] | null
 }
+
+const attendanceDaySelect =
+  'id,user_id,work_date,check_in_event_id,check_out_event_id,review_status,review_note,created_at,user:profiles!attendance_days_user_id_fkey(id,email,full_name,employee_code)'
 
 function extensionFromContentType(contentType: string) {
   if (contentType === 'image/png') {
@@ -91,6 +104,29 @@ function mapEvent(row: AttendanceEventRow, photoUrl: string | null) {
   }
 }
 
+function first<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null
+  }
+
+  return value ?? null
+}
+
+function mapAttendanceUser(day: AttendanceDayRow) {
+  const profile = first(day.user ?? day.profiles)
+
+  if (!profile) {
+    return null
+  }
+
+  return {
+    id: profile.id,
+    email: profile.email,
+    fullName: profile.full_name,
+    employeeCode: profile.employee_code
+  }
+}
+
 async function createSignedReadUrl(path?: string | null) {
   if (!path) {
     return null
@@ -108,6 +144,17 @@ async function createSignedReadUrl(path?: string | null) {
   return data.signedUrl
 }
 
+async function assertUploadedPhotoExists(upload: PhotoUploadRow) {
+  const supabaseAdmin = requireSupabaseAdmin()
+  const { data: exists, error } = await supabaseAdmin.storage
+    .from(upload.storage_bucket)
+    .exists(upload.storage_path)
+
+  if (error || !exists) {
+    throw badRequest('Attendance photo was not uploaded')
+  }
+}
+
 async function mapAttendanceDay(
   day: AttendanceDayRow,
   events: AttendanceEventRow[] = []
@@ -118,6 +165,7 @@ async function mapAttendanceDay(
   return {
     id: day.id,
     userId: day.user_id,
+    user: mapAttendanceUser(day),
     workDate: day.work_date,
     reviewStatus: day.review_status,
     reviewNote: day.review_note,
@@ -190,7 +238,7 @@ async function getPendingUpload(userId: string, pendingUploadId: string, eventTy
   const supabaseAdmin = requireSupabaseAdmin()
   const { data, error } = await supabaseAdmin
     .from('attendance_photo_uploads')
-    .select('id,user_id,event_type,storage_bucket,storage_path,content_type,status,expires_at')
+    .select('id,user_id,event_type,storage_bucket,storage_path,content_type,status,expires_at,upload_expires_at')
     .eq('id', pendingUploadId)
     .eq('user_id', userId)
     .eq('event_type', eventType)
@@ -210,7 +258,7 @@ async function getPendingUpload(userId: string, pendingUploadId: string, eventTy
     throw badRequest('Attendance upload was already used')
   }
 
-  if (new Date(upload.expires_at).getTime() < Date.now()) {
+  if (new Date(upload.upload_expires_at).getTime() < Date.now()) {
     throw badRequest('Attendance upload expired')
   }
 
@@ -228,7 +276,8 @@ export async function createAttendanceUploadUrl(input: {
   const workDate = getBangkokDate()
   const extension = extensionFromContentType(input.payload.contentType)
   const storagePath = `attendance/${input.userId}/${workDate}/${pendingUploadId}.${extension}`
-  const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+  const uploadExpiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+  const retentionExpiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
 
   const { data: signedUpload, error: signedUploadError } = await supabaseAdmin.storage
     .from(env.ATTENDANCE_PHOTO_BUCKET)
@@ -245,7 +294,8 @@ export async function createAttendanceUploadUrl(input: {
     storage_bucket: env.ATTENDANCE_PHOTO_BUCKET,
     storage_path: storagePath,
     content_type: input.payload.contentType,
-    expires_at: expiresAt
+    expires_at: retentionExpiresAt,
+    upload_expires_at: uploadExpiresAt
   })
 
   if (error) {
@@ -257,7 +307,7 @@ export async function createAttendanceUploadUrl(input: {
     storagePath,
     signedUploadUrl: signedUpload.signedUrl,
     token: signedUpload.token,
-    expiresAt
+    expiresAt: uploadExpiresAt
   }
 }
 
@@ -271,6 +321,8 @@ export async function confirmAttendance(input: {
 
   const supabaseAdmin = requireSupabaseAdmin()
   const upload = await getPendingUpload(input.userId, input.payload.pendingUploadId, input.eventType)
+  await assertUploadedPhotoExists(upload)
+
   const workArea = await getActiveWorkArea(input.userId)
   const point = { lat: input.payload.lat, lng: input.payload.lng }
 
@@ -389,9 +441,7 @@ export async function listAttendance(query: ListAttendanceQuery) {
 
   let request = supabaseAdmin
     .from('attendance_days')
-    .select('id,user_id,work_date,check_in_event_id,check_out_event_id,review_status,review_note,created_at', {
-      count: 'exact'
-    })
+    .select(attendanceDaySelect, { count: 'exact' })
     .order('work_date', { ascending: false })
     .range(from, to)
 
@@ -454,7 +504,7 @@ export async function getAttendanceDay(attendanceDayId: string) {
   const supabaseAdmin = requireSupabaseAdmin()
   const { data, error } = await supabaseAdmin
     .from('attendance_days')
-    .select('id,user_id,work_date,check_in_event_id,check_out_event_id,review_status,review_note,created_at')
+    .select(attendanceDaySelect)
     .eq('id', attendanceDayId)
     .maybeSingle()
 
@@ -490,7 +540,7 @@ export async function reviewAttendance(input: {
       reviewed_at: new Date().toISOString()
     })
     .eq('id', input.attendanceDayId)
-    .select('id,user_id,work_date,check_in_event_id,check_out_event_id,review_status,review_note,created_at')
+    .select(attendanceDaySelect)
     .maybeSingle()
 
   if (error) {

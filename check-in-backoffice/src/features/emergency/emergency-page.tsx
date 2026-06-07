@@ -3,13 +3,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, RefreshCcw } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { EmptyState } from '@/components/data/empty-state'
 import { ErrorBanner } from '@/components/data/error-banner'
 import { TableSkeleton } from '@/components/data/table-skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { NativeSelect } from '@/components/ui/native-select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -19,7 +26,10 @@ import {
   TableRow
 } from '@/components/ui/table'
 import type { EmergencyLogStatus } from '@/generated/api/model'
+import { usePermissions } from '@/hooks/use-permissions'
 import { listEmergencyLogs, updateEmergencyLog } from '@/lib/api/backoffice'
+import { getErrorMessage } from '@/lib/api/errors'
+import { translateStatusKey, useI18n } from '@/lib/i18n'
 
 type EmergencyStatusFilter = '' | EmergencyLogStatus
 
@@ -37,6 +47,9 @@ function statusVariant(status: EmergencyLogStatus) {
 
 export function EmergencyPage() {
   const queryClient = useQueryClient()
+  const { locale, t } = useI18n()
+  const { has, permissions } = usePermissions()
+  const canUpdateEmergency = has(permissions.emergencyUpdate)
   const [status, setStatus] = useState<EmergencyStatusFilter>('OPEN')
   const emergencyQuery = useQuery({
     queryKey: ['emergency-logs', { status }],
@@ -50,7 +63,18 @@ export function EmergencyPage() {
   const updateMutation = useMutation({
     mutationFn: (input: { id: string; status: EmergencyLogStatus }) =>
       updateEmergencyLog(input.id, { status: input.status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['emergency-logs'] })
+    onSuccess: (_response, input) => {
+      queryClient.invalidateQueries({ queryKey: ['emergency-logs'] })
+      toast.success(
+        input.status === 'ACKNOWLEDGED'
+          ? t('emergency.toastAcknowledged')
+          : t('emergency.toastResolved')
+      )
+    },
+    onError: (error) =>
+      toast.error(t('toast.actionFailed'), {
+        description: getErrorMessage(error)
+      })
   })
   const logs = emergencyQuery.data?.emergencyLogs ?? []
 
@@ -58,20 +82,24 @@ export function EmergencyPage() {
     <Card>
       <CardHeader>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <CardTitle>Emergency logs</CardTitle>
+          <CardTitle>{t('emergency.logsTitle')}</CardTitle>
           <div className="flex gap-2">
-            <NativeSelect
-              className="w-44"
-              value={status}
-              onChange={(event) =>
-                setStatus(event.target.value as EmergencyStatusFilter)
+            <Select
+              value={status || 'ALL'}
+              onValueChange={(value) =>
+                setStatus(value === 'ALL' ? '' : (value as EmergencyStatusFilter))
               }
             >
-              <option value="">All</option>
-              <option value="OPEN">Open</option>
-              <option value="ACKNOWLEDGED">Acknowledged</option>
-              <option value="RESOLVED">Resolved</option>
-            </NativeSelect>
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t('common.all')}</SelectItem>
+                <SelectItem value="OPEN">{t('status.open')}</SelectItem>
+                <SelectItem value="ACKNOWLEDGED">{t('status.acknowledged')}</SelectItem>
+                <SelectItem value="RESOLVED">{t('status.resolved')}</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               size="sm"
@@ -79,7 +107,7 @@ export function EmergencyPage() {
               disabled={emergencyQuery.isFetching}
             >
               <RefreshCcw className="size-4" />
-              Refresh
+              {t('common.refresh')}
             </Button>
           </div>
         </div>
@@ -94,19 +122,19 @@ export function EmergencyPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Triggered</TableHead>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-56 text-right">Action</TableHead>
+                  <TableHead>{t('emergency.triggered')}</TableHead>
+                  <TableHead>{t('common.employee')}</TableHead>
+                  <TableHead>{t('common.type')}</TableHead>
+                  <TableHead>{t('common.location')}</TableHead>
+                  <TableHead>{t('common.status')}</TableHead>
+                  <TableHead className="w-56 text-right">{t('common.action')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {logs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell className="font-medium">
-                      {new Date(log.triggeredAt).toLocaleString()}
+                      {new Date(log.triggeredAt).toLocaleString(locale)}
                     </TableCell>
                     <TableCell className="font-mono text-xs">{log.userId}</TableCell>
                     <TableCell>
@@ -125,14 +153,18 @@ export function EmergencyPage() {
                       </a>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusVariant(log.status)}>{log.status}</Badge>
+                      <Badge variant={statusVariant(log.status)}>
+                        {t(translateStatusKey(log.status))}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={updateMutation.isPending || log.status !== 'OPEN'}
+                          disabled={
+                            updateMutation.isPending || log.status !== 'OPEN' || !canUpdateEmergency
+                          }
                           onClick={() =>
                             updateMutation.mutate({
                               id: log.id,
@@ -140,11 +172,15 @@ export function EmergencyPage() {
                             })
                           }
                         >
-                          Ack
+                          {t('emergency.ack')}
                         </Button>
                         <Button
                           size="sm"
-                          disabled={updateMutation.isPending || log.status === 'RESOLVED'}
+                          disabled={
+                            updateMutation.isPending ||
+                            log.status === 'RESOLVED' ||
+                            !canUpdateEmergency
+                          }
                           onClick={() =>
                             updateMutation.mutate({
                               id: log.id,
@@ -152,7 +188,7 @@ export function EmergencyPage() {
                             })
                           }
                         >
-                          Resolve
+                          {t('emergency.resolve')}
                         </Button>
                       </div>
                     </TableCell>
@@ -161,7 +197,7 @@ export function EmergencyPage() {
               </TableBody>
             </Table>
           ) : (
-            <EmptyState label="No emergency logs found" />
+            <EmptyState label={t('emergency.empty')} />
           )
         ) : null}
       </CardContent>

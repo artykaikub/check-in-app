@@ -1,133 +1,224 @@
 import { fetchJson } from './fetch-json'
+import {
+  getCreateBackofficeUserUrl,
+  getCreateSalaryUploadUrlUrl,
+  getCreateWorkLocationUrl,
+  getDeleteSalaryRecordUrl,
+  getDeleteSalaryUploadUrl,
+  getGetAttendanceDayUrl,
+  getGetEmergencyLogUrl,
+  getGetUserEffectivePermissionsUrl,
+  getGetUserPermissionOverridesUrl,
+  getGetUserWorkAreaUrl,
+  getImportSalaryUploadUrl,
+  getListAttendanceUrl,
+  getListAuditLogsUrl,
+  getListBackofficeUsersUrl,
+  getListEmergencyLogsUrl,
+  getListEventLogsUrl,
+  getListPermissionsUrl,
+  getListRolesUrl,
+  getListSalaryRecordsUrl,
+  getListSalaryUploadsUrl,
+  getListWorkLocationsUrl,
+  getResetUserDeviceUrl,
+  getReviewAttendanceUrl,
+  getSetUserPermissionOverridesUrl,
+  getSetUserWorkAreaUrl,
+  getUpdateBackofficeUserUrl,
+  getUpdateEmergencyLogUrl,
+  getUpdateWorkLocationUrl
+} from '@/generated/api/backoffice/backoffice'
 import type {
   AttendanceDayResponse,
+  BackofficeUserResponse,
+  CreateBackofficeUserRequest,
   CreateSalaryUploadUrlRequest,
   CreateSalaryUploadUrlResponse,
   CreateWorkLocationRequest,
+  DeleteSalaryRecordResponse,
+  DeleteSalaryUploadResponse,
   EmergencyLogResponse,
   EmployeeWorkAreaResponse,
   ImportSalaryRequest,
   ImportSalaryResponse,
+  ListAuditLogsParams,
+  ListAuditLogsResponse,
   ListAttendanceParams,
   ListAttendanceResponse,
   ListBackofficeUsersParams,
+  ListEventLogsParams,
+  ListEventLogsResponse,
   ListEmergencyLogsParams,
   ListEmergencyLogsResponse,
   ListSalaryRecordsParams,
   ListSalaryRecordsResponse,
   ListSalaryUploadsParams,
   ListSalaryUploadsResponse,
+  ListPermissionsResponse,
+  ListRolesResponse,
   ListUsersResponse,
   ListWorkLocationsResponse,
   ResetDeviceResponse,
   ReviewAttendanceRequest,
+  SetUserPermissionOverridesRequest,
   SetEmployeeWorkAreaRequest,
   UpdateEmergencyLogRequest,
+  UpdateBackofficeUserRequest,
   UpdateWorkLocationRequest,
+  UserPermissionOverridesResponse,
+  UserEffectivePermissionsResponse,
   WorkLocationResponse
 } from '@/generated/api/model'
 
-function withQuery(path: string, params?: Record<string, unknown>) {
-  const searchParams = new URLSearchParams()
-
-  for (const [key, value] of Object.entries(params ?? {})) {
-    if (value !== undefined && value !== null && value !== '') {
-      searchParams.set(key, String(value))
-    }
-  }
-
-  const queryString = searchParams.toString()
-  return queryString ? `${path}?${queryString}` : path
+export function listUsers(params: ListBackofficeUsersParams = {}) {
+  return fetchJson<ListUsersResponse>(getListBackofficeUsersUrl(params))
 }
 
-export function listUsers(params: ListBackofficeUsersParams = {}) {
-  return fetchJson<ListUsersResponse>(withQuery('/api/backoffice/users', params))
+export function listRoles() {
+  return fetchJson<ListRolesResponse>(getListRolesUrl())
+}
+
+export function listPermissions() {
+  return fetchJson<ListPermissionsResponse>(getListPermissionsUrl())
+}
+
+export function createUser(payload: CreateBackofficeUserRequest) {
+  return fetchJson<BackofficeUserResponse>(getCreateBackofficeUserUrl(), {
+    method: 'POST',
+    body: payload
+  })
+}
+
+export function updateUser(userId: string, payload: UpdateBackofficeUserRequest) {
+  return fetchJson<BackofficeUserResponse>(getUpdateBackofficeUserUrl(userId), {
+    method: 'PATCH',
+    body: payload
+  })
 }
 
 export function resetUserDevice(userId: string, reason?: string) {
-  return fetchJson<ResetDeviceResponse>(`/api/backoffice/users/${userId}/device/reset`, {
+  return fetchJson<ResetDeviceResponse>(getResetUserDeviceUrl(userId), {
     method: 'POST',
     body: reason ? { reason } : {}
   })
 }
 
+export function getUserPermissionOverrides(userId: string) {
+  return fetchJson<UserPermissionOverridesResponse>(getGetUserPermissionOverridesUrl(userId))
+}
+
+export function getUserEffectivePermissions(userId: string) {
+  return fetchJson<UserEffectivePermissionsResponse>(getGetUserEffectivePermissionsUrl(userId))
+}
+
+export function setUserPermissionOverrides(
+  userId: string,
+  payload: SetUserPermissionOverridesRequest
+) {
+  return fetchJson<UserPermissionOverridesResponse>(getSetUserPermissionOverridesUrl(userId), {
+    method: 'PUT',
+    body: payload
+  })
+}
+
 export function listWorkLocations() {
-  return fetchJson<ListWorkLocationsResponse>('/api/backoffice/work-locations')
+  return fetchJson<ListWorkLocationsResponse>(getListWorkLocationsUrl())
 }
 
 export function createWorkLocation(payload: CreateWorkLocationRequest) {
-  return fetchJson<WorkLocationResponse>('/api/backoffice/work-locations', {
+  return fetchJson<WorkLocationResponse>(getCreateWorkLocationUrl(), {
     method: 'POST',
     body: payload
   })
 }
 
 export function updateWorkLocation(workLocationId: string, payload: UpdateWorkLocationRequest) {
-  return fetchJson<WorkLocationResponse>(`/api/backoffice/work-locations/${workLocationId}`, {
+  return fetchJson<WorkLocationResponse>(getUpdateWorkLocationUrl(workLocationId), {
     method: 'PATCH',
     body: payload
   })
 }
 
 export function getUserWorkArea(userId: string) {
-  return fetchJson<EmployeeWorkAreaResponse>(`/api/backoffice/users/${userId}/work-area`)
+  return fetchJson<EmployeeWorkAreaResponse>(getGetUserWorkAreaUrl(userId))
 }
 
 export function setUserWorkArea(userId: string, payload: SetEmployeeWorkAreaRequest) {
-  return fetchJson<EmployeeWorkAreaResponse>(`/api/backoffice/users/${userId}/work-area`, {
+  return fetchJson<EmployeeWorkAreaResponse>(getSetUserWorkAreaUrl(userId), {
     method: 'PUT',
     body: payload
   })
 }
 
 export function listAttendance(params: ListAttendanceParams = {}) {
-  return fetchJson<ListAttendanceResponse>(withQuery('/api/backoffice/attendance', params))
+  return fetchJson<ListAttendanceResponse>(getListAttendanceUrl(params))
 }
 
 export function getAttendanceDay(attendanceDayId: string) {
-  return fetchJson<AttendanceDayResponse>(`/api/backoffice/attendance/${attendanceDayId}`)
+  return fetchJson<AttendanceDayResponse>(getGetAttendanceDayUrl(attendanceDayId))
 }
 
 export function reviewAttendance(attendanceDayId: string, payload: ReviewAttendanceRequest) {
-  return fetchJson<AttendanceDayResponse>(`/api/backoffice/attendance/${attendanceDayId}/review`, {
+  return fetchJson<AttendanceDayResponse>(getReviewAttendanceUrl(attendanceDayId), {
     method: 'PATCH',
     body: payload
   })
 }
 
 export function listEmergencyLogs(params: ListEmergencyLogsParams = {}) {
-  return fetchJson<ListEmergencyLogsResponse>(withQuery('/api/backoffice/emergency-logs', params))
+  return fetchJson<ListEmergencyLogsResponse>(getListEmergencyLogsUrl(params))
 }
 
 export function getEmergencyLog(emergencyLogId: string) {
-  return fetchJson<EmergencyLogResponse>(`/api/backoffice/emergency-logs/${emergencyLogId}`)
+  return fetchJson<EmergencyLogResponse>(getGetEmergencyLogUrl(emergencyLogId))
 }
 
 export function updateEmergencyLog(emergencyLogId: string, payload: UpdateEmergencyLogRequest) {
-  return fetchJson<EmergencyLogResponse>(`/api/backoffice/emergency-logs/${emergencyLogId}`, {
+  return fetchJson<EmergencyLogResponse>(getUpdateEmergencyLogUrl(emergencyLogId), {
     method: 'PATCH',
     body: payload
   })
 }
 
 export function createSalaryUploadUrl(payload: CreateSalaryUploadUrlRequest) {
-  return fetchJson<CreateSalaryUploadUrlResponse>('/api/backoffice/salary/upload-url', {
+  return fetchJson<CreateSalaryUploadUrlResponse>(getCreateSalaryUploadUrlUrl(), {
     method: 'POST',
     body: payload
   })
 }
 
 export function importSalaryUpload(payload: ImportSalaryRequest) {
-  return fetchJson<ImportSalaryResponse>('/api/backoffice/salary/import', {
+  return fetchJson<ImportSalaryResponse>(getImportSalaryUploadUrl(), {
     method: 'POST',
     body: payload
   })
 }
 
 export function listSalaryUploads(params: ListSalaryUploadsParams = {}) {
-  return fetchJson<ListSalaryUploadsResponse>(withQuery('/api/backoffice/salary/uploads', params))
+  return fetchJson<ListSalaryUploadsResponse>(getListSalaryUploadsUrl(params))
 }
 
 export function listSalaryRecords(params: ListSalaryRecordsParams = {}) {
-  return fetchJson<ListSalaryRecordsResponse>(withQuery('/api/backoffice/salary/records', params))
+  return fetchJson<ListSalaryRecordsResponse>(getListSalaryRecordsUrl(params))
+}
+
+export function deleteSalaryUpload(uploadBatchId: string) {
+  return fetchJson<DeleteSalaryUploadResponse>(getDeleteSalaryUploadUrl(uploadBatchId), {
+    method: 'DELETE'
+  })
+}
+
+export function deleteSalaryRecord(salaryRecordId: string) {
+  return fetchJson<DeleteSalaryRecordResponse>(getDeleteSalaryRecordUrl(salaryRecordId), {
+    method: 'DELETE'
+  })
+}
+
+export function listAuditLogs(params: ListAuditLogsParams = {}) {
+  return fetchJson<ListAuditLogsResponse>(getListAuditLogsUrl(params))
+}
+
+export function listEventLogs(params: ListEventLogsParams = {}) {
+  return fetchJson<ListEventLogsResponse>(getListEventLogsUrl(params))
 }

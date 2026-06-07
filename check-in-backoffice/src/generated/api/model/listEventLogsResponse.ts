@@ -5,8 +5,11 @@
  * Check-in backend API for shared auth, frontend, and backoffice clients.
  * OpenAPI spec version: 0.1.0
  */
-import type { User } from './user';
+import type { EventLog } from './eventLog';
 
-export interface BackofficeProfileResponse {
-  user: User;
+export interface ListEventLogsResponse {
+  eventLogs: EventLog[];
+  page: number;
+  perPage: number;
+  total: number;
 }

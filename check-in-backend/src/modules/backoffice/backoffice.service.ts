@@ -1,13 +1,17 @@
-import { badRequest, notFound } from '../../core/errors/http-error.js'
+import { badRequest, forbidden, notFound } from '../../core/errors/http-error.js'
 import { requireSupabaseAdmin } from '../../core/supabase/require-admin-client.js'
 import { getActiveDeviceBinding, resetDeviceBinding } from '../auth/device.service.js'
 import { writeAuditLog } from '../logs/logs.service.js'
 import type { Context } from 'hono'
 import type { AppEnv } from '../../types/hono.js'
 import type {
+  CreateBackofficeUserRequest,
   CreateWorkLocationRequest,
+  LogsQuery,
   ListUsersQuery,
+  SetUserPermissionOverridesRequest,
   SetEmployeeWorkAreaRequest,
+  UpdateBackofficeUserRequest,
   UpdateWorkLocationRequest
 } from './backoffice.schemas.js'
 
@@ -22,10 +26,19 @@ type ProfileRow = {
   email: string | null
   full_name: string | null
   employee_code: string | null
+  role_id?: string
   is_active: boolean
   created_at: string | null
   roles?: RoleRow | RoleRow[] | null
 }
+
+type PermissionRow = {
+  id: string
+  key: string
+  name: string
+}
+
+type EffectivePermissionSource = 'ROLE' | 'USER_ALLOW' | 'USER_DENY' | 'NONE'
 
 type WorkLocationRow = {
   id: string
@@ -43,6 +56,29 @@ type EmployeeWorkAreaRow = {
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+type AuditLogRow = {
+  id: string
+  actor_user_id: string | null
+  action: string
+  resource_type: string
+  resource_id: string | null
+  ip_address: string | null
+  user_agent: string | null
+  metadata: unknown
+  created_at: string
+}
+
+type EventLogRow = {
+  id: string
+  actor_user_id: string | null
+  event_type: string
+  severity: 'INFO' | 'WARN' | 'ERROR'
+  resource_type: string | null
+  resource_id: string | null
+  metadata: unknown
+  created_at: string
 }
 
 function first<T>(value: T | T[] | null | undefined): T | null {
@@ -116,6 +152,52 @@ function mapWorkArea(row: EmployeeWorkAreaRow) {
   }
 }
 
+function mapAuditLog(row: AuditLogRow) {
+  return {
+    id: row.id,
+    actorUserId: row.actor_user_id,
+    action: row.action,
+    resourceType: row.resource_type,
+    resourceId: row.resource_id,
+    ipAddress: row.ip_address,
+    userAgent: row.user_agent,
+    metadata: row.metadata,
+    createdAt: row.created_at
+  }
+}
+
+function mapEventLog(row: EventLogRow) {
+  return {
+    id: row.id,
+    actorUserId: row.actor_user_id,
+    eventType: row.event_type,
+    severity: row.severity,
+    resourceType: row.resource_type,
+    resourceId: row.resource_id,
+    metadata: row.metadata,
+    createdAt: row.created_at
+  }
+}
+
+async function getUserById(userId: string) {
+  const supabaseAdmin = requireSupabaseAdmin()
+  const { data, error } = await supabaseAdmin
+    .from('profiles')
+    .select('id,email,full_name,employee_code,is_active,created_at,roles(id,key,name)')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (error) {
+    throw badRequest(error.message)
+  }
+
+  if (!data) {
+    throw notFound('User profile was not found')
+  }
+
+  return mapUser(data as ProfileRow)
+}
+
 export async function listUsers(query: ListUsersQuery) {
   const supabaseAdmin = requireSupabaseAdmin()
   const from = (query.page - 1) * query.perPage
@@ -147,6 +229,295 @@ export async function listUsers(query: ListUsersQuery) {
     perPage: query.perPage,
     total: count ?? 0
   }
+}
+
+export async function createBackofficeUser(input: {
+  payload: CreateBackofficeUserRequest
+  actorUserId: string
+  c?: Context<AppEnv> | undefined
+}) {
+  const supabaseAdmin = requireSupabaseAdmin()
+  const { data: role, error: roleError } = await supabaseAdmin
+    .from('roles')
+    .select('id')
+    .eq('id', input.payload.roleId)
+    .maybeSingle()
+
+  if (roleError || !role) {
+    throw badRequest(roleError?.message ?? 'Role was not found')
+  }
+
+  const { data: createdUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    email: input.payload.email,
+    password: input.payload.password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: input.payload.fullName ?? null
+    }
+  })
+
+  if (createError || !createdUser.user) {
+    throw badRequest(createError?.message ?? 'Unable to create user')
+  }
+
+  const { error: profileError } = await supabaseAdmin.from('profiles').upsert(
+    {
+      id: createdUser.user.id,
+      email: input.payload.email,
+      full_name: input.payload.fullName ?? null,
+      employee_code: input.payload.employeeCode ?? null,
+      role_id: input.payload.roleId,
+      is_active: input.payload.isActive
+    },
+    { onConflict: 'id' }
+  )
+
+  if (profileError) {
+    await supabaseAdmin.auth.admin.deleteUser(createdUser.user.id)
+    throw badRequest(profileError.message)
+  }
+
+  await writeAuditLog({
+    actorUserId: input.actorUserId,
+    action: 'user.create',
+    resourceType: 'profile',
+    resourceId: createdUser.user.id,
+    metadata: {
+      email: input.payload.email,
+      roleId: input.payload.roleId
+    },
+    c: input.c
+  })
+
+  return { user: await getUserById(createdUser.user.id) }
+}
+
+export async function updateBackofficeUser(input: {
+  userId: string
+  payload: UpdateBackofficeUserRequest
+  actorUserId: string
+  c?: Context<AppEnv> | undefined
+}) {
+  const supabaseAdmin = requireSupabaseAdmin()
+  const updates: Record<string, unknown> = {}
+
+  if (input.payload.fullName !== undefined) {
+    updates.full_name = input.payload.fullName
+  }
+
+  if (input.payload.employeeCode !== undefined) {
+    updates.employee_code = input.payload.employeeCode
+  }
+
+  if (input.payload.roleId !== undefined) {
+    if (input.actorUserId === input.userId) {
+      throw forbidden('You cannot change your own role')
+    }
+
+    updates.role_id = input.payload.roleId
+  }
+
+  if (input.payload.isActive !== undefined) {
+    updates.is_active = input.payload.isActive
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return { user: await getUserById(input.userId) }
+  }
+
+  const { error } = await supabaseAdmin.from('profiles').update(updates).eq('id', input.userId)
+
+  if (error) {
+    throw badRequest(error.message)
+  }
+
+  await writeAuditLog({
+    actorUserId: input.actorUserId,
+    action: 'user.update',
+    resourceType: 'profile',
+    resourceId: input.userId,
+    metadata: { updates },
+    c: input.c
+  })
+
+  return { user: await getUserById(input.userId) }
+}
+
+export async function getUserPermissionOverrides(userId: string) {
+  const supabaseAdmin = requireSupabaseAdmin()
+  const { data, error } = await supabaseAdmin
+    .from('user_permissions')
+    .select('effect,permissions(key)')
+    .eq('user_id', userId)
+
+  if (error) {
+    throw badRequest(error.message)
+  }
+
+  return {
+    overrides: ((data ?? []) as Array<{
+      effect: 'ALLOW' | 'DENY'
+      permissions?: { key: string } | { key: string }[] | null
+    }>)
+      .map((row) => ({
+        permissionKey: first(row.permissions)?.key,
+        effect: row.effect
+      }))
+      .filter((row): row is { permissionKey: string; effect: 'ALLOW' | 'DENY' } =>
+        Boolean(row.permissionKey)
+      )
+  }
+}
+
+export async function getUserEffectivePermissions(userId: string) {
+  const supabaseAdmin = requireSupabaseAdmin()
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .select('id,email,full_name,employee_code,role_id,is_active,created_at,roles(id,key,name)')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (profileError) {
+    throw badRequest(profileError.message)
+  }
+
+  if (!profile) {
+    throw notFound('User profile was not found')
+  }
+
+  const user = mapUser(profile as ProfileRow)
+  const roleId = (profile as ProfileRow).role_id
+
+  if (!roleId) {
+    throw badRequest(`Role is missing for user ${userId}`)
+  }
+
+  const [
+    { data: allPermissions, error: permissionsError },
+    { data: rolePermissions, error: rolePermissionsError },
+    { data: userPermissions, error: userPermissionsError }
+  ] = await Promise.all([
+    supabaseAdmin.from('permissions').select('id,key,name').order('key', { ascending: true }),
+    supabaseAdmin.from('role_permissions').select('permission_id').eq('role_id', roleId),
+    supabaseAdmin.from('user_permissions').select('permission_id,effect').eq('user_id', userId)
+  ])
+
+  if (permissionsError) {
+    throw badRequest(permissionsError.message)
+  }
+
+  if (rolePermissionsError) {
+    throw badRequest(rolePermissionsError.message)
+  }
+
+  if (userPermissionsError) {
+    throw badRequest(userPermissionsError.message)
+  }
+
+  const rolePermissionIds = new Set(
+    ((rolePermissions ?? []) as Array<{ permission_id: string }>).map((row) => row.permission_id)
+  )
+  const overrideEffectByPermissionId = new Map(
+    ((userPermissions ?? []) as Array<{ permission_id: string; effect: 'ALLOW' | 'DENY' }>).map(
+      (row) => [row.permission_id, row.effect] as const
+    )
+  )
+
+  return {
+    user,
+    permissions: ((allPermissions ?? []) as PermissionRow[]).map((permission) => {
+      const roleGranted = rolePermissionIds.has(permission.id)
+      const overrideEffect = overrideEffectByPermissionId.get(permission.id) ?? null
+      const granted = overrideEffect === 'ALLOW' || (roleGranted && overrideEffect !== 'DENY')
+      const source: EffectivePermissionSource =
+        overrideEffect === 'ALLOW'
+          ? 'USER_ALLOW'
+          : overrideEffect === 'DENY'
+            ? 'USER_DENY'
+            : roleGranted
+              ? 'ROLE'
+              : 'NONE'
+
+      return {
+        permission: {
+          id: permission.id,
+          key: permission.key,
+          name: permission.name
+        },
+        granted,
+        roleGranted,
+        overrideEffect,
+        source
+      }
+    })
+  }
+}
+
+export async function setUserPermissionOverrides(input: {
+  userId: string
+  payload: SetUserPermissionOverridesRequest
+  actorUserId: string
+  c?: Context<AppEnv> | undefined
+}) {
+  const supabaseAdmin = requireSupabaseAdmin()
+  const permissionKeys = input.payload.overrides.map((override) => override.permissionKey)
+  const { data: permissions, error: permissionsError } = await supabaseAdmin
+    .from('permissions')
+    .select('id,key')
+    .in('key', permissionKeys.length > 0 ? permissionKeys : ['__none__'])
+
+  if (permissionsError) {
+    throw badRequest(permissionsError.message)
+  }
+
+  const permissionIdByKey = new Map(
+    ((permissions ?? []) as Array<{ id: string; key: string }>).map((permission) => [
+      permission.key,
+      permission.id
+    ])
+  )
+  const missingPermission = permissionKeys.find((key) => !permissionIdByKey.has(key))
+
+  if (missingPermission) {
+    throw badRequest(`Permission was not found: ${missingPermission}`)
+  }
+
+  const { error: deleteError } = await supabaseAdmin
+    .from('user_permissions')
+    .delete()
+    .eq('user_id', input.userId)
+
+  if (deleteError) {
+    throw badRequest(deleteError.message)
+  }
+
+  if (input.payload.overrides.length > 0) {
+    const { error: insertError } = await supabaseAdmin.from('user_permissions').insert(
+      input.payload.overrides.map((override) => ({
+        user_id: input.userId,
+        permission_id: permissionIdByKey.get(override.permissionKey),
+        effect: override.effect,
+        created_by: input.actorUserId
+      }))
+    )
+
+    if (insertError) {
+      throw badRequest(insertError.message)
+    }
+  }
+
+  await writeAuditLog({
+    actorUserId: input.actorUserId,
+    action: 'user_permissions.set',
+    resourceType: 'profile',
+    resourceId: input.userId,
+    metadata: {
+      overrides: input.payload.overrides
+    },
+    c: input.c
+  })
+
+  return getUserPermissionOverrides(input.userId)
 }
 
 export async function listRoles() {
@@ -354,4 +725,52 @@ export async function setUserWorkArea(input: {
   })
 
   return { workArea: mapWorkArea(data as EmployeeWorkAreaRow) }
+}
+
+export async function listAuditLogs(query: LogsQuery) {
+  const supabaseAdmin = requireSupabaseAdmin()
+  const from = (query.page - 1) * query.perPage
+  const to = from + query.perPage - 1
+  const { data, error, count } = await supabaseAdmin
+    .from('audit_logs')
+    .select('id,actor_user_id,action,resource_type,resource_id,ip_address,user_agent,metadata,created_at', {
+      count: 'exact'
+    })
+    .order('created_at', { ascending: false })
+    .range(from, to)
+
+  if (error) {
+    throw badRequest(error.message)
+  }
+
+  return {
+    auditLogs: ((data ?? []) as AuditLogRow[]).map(mapAuditLog),
+    page: query.page,
+    perPage: query.perPage,
+    total: count ?? 0
+  }
+}
+
+export async function listEventLogs(query: LogsQuery) {
+  const supabaseAdmin = requireSupabaseAdmin()
+  const from = (query.page - 1) * query.perPage
+  const to = from + query.perPage - 1
+  const { data, error, count } = await supabaseAdmin
+    .from('event_logs')
+    .select('id,actor_user_id,event_type,severity,resource_type,resource_id,metadata,created_at', {
+      count: 'exact'
+    })
+    .order('created_at', { ascending: false })
+    .range(from, to)
+
+  if (error) {
+    throw badRequest(error.message)
+  }
+
+  return {
+    eventLogs: ((data ?? []) as EventLogRow[]).map(mapEventLog),
+    page: query.page,
+    perPage: query.perPage,
+    total: count ?? 0
+  }
 }

@@ -9,12 +9,6 @@ export const WorkLocationIdParamSchema = z.object({
   workLocationId: z.string().uuid()
 })
 
-export const BackofficeProfileResponseSchema = z
-  .object({
-    user: UserSchema
-  })
-  .openapi('BackofficeProfileResponse')
-
 export const ListUsersQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(20),
@@ -48,6 +42,68 @@ export const BackofficeUserSchema = z
     createdAt: z.string().nullable()
   })
   .openapi('BackofficeUser')
+
+export const CreateBackofficeUserRequestSchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(8),
+    fullName: z.string().min(1).max(120).optional(),
+    employeeCode: z.string().min(1).max(80).optional(),
+    roleId: z.string().uuid(),
+    isActive: z.boolean().default(true)
+  })
+  .openapi('CreateBackofficeUserRequest')
+
+export const UpdateBackofficeUserRequestSchema = z
+  .object({
+    fullName: z.string().min(1).max(120).nullable().optional(),
+    employeeCode: z.string().min(1).max(80).nullable().optional(),
+    roleId: z.string().uuid().optional(),
+    isActive: z.boolean().optional()
+  })
+  .openapi('UpdateBackofficeUserRequest')
+
+export const UserPermissionOverrideSchema = z
+  .object({
+    permissionKey: z.string(),
+    effect: z.enum(['ALLOW', 'DENY'])
+  })
+  .openapi('UserPermissionOverride')
+
+export const SetUserPermissionOverridesRequestSchema = z
+  .object({
+    overrides: z.array(UserPermissionOverrideSchema).max(100)
+  })
+  .openapi('SetUserPermissionOverridesRequest')
+
+export const UserPermissionOverridesResponseSchema = z
+  .object({
+    overrides: z.array(UserPermissionOverrideSchema)
+  })
+  .openapi('UserPermissionOverridesResponse')
+
+export const EffectivePermissionSchema = z
+  .object({
+    permission: PermissionSchema,
+    granted: z.boolean(),
+    roleGranted: z.boolean(),
+    overrideEffect: z.enum(['ALLOW', 'DENY']).nullable(),
+    source: z.enum(['ROLE', 'USER_ALLOW', 'USER_DENY', 'NONE'])
+  })
+  .openapi('EffectivePermission')
+
+export const UserEffectivePermissionsResponseSchema = z
+  .object({
+    user: BackofficeUserSchema,
+    permissions: z.array(EffectivePermissionSchema)
+  })
+  .openapi('UserEffectivePermissionsResponse')
+
+export const BackofficeUserResponseSchema = z
+  .object({
+    user: BackofficeUserSchema
+  })
+  .openapi('BackofficeUserResponse')
 
 export const ListUsersResponseSchema = z
   .object({
@@ -166,7 +222,63 @@ export const EmployeeWorkAreaResponseSchema = z
   })
   .openapi('EmployeeWorkAreaResponse')
 
+export const LogsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  perPage: z.coerce.number().int().min(1).max(100).default(20)
+})
+
+export const AuditLogSchema = z
+  .object({
+    id: z.string().uuid(),
+    actorUserId: z.string().uuid().nullable(),
+    action: z.string(),
+    resourceType: z.string(),
+    resourceId: z.string().nullable(),
+    ipAddress: z.string().nullable(),
+    userAgent: z.string().nullable(),
+    metadata: z.unknown(),
+    createdAt: z.string().datetime()
+  })
+  .openapi('AuditLog')
+
+export const EventLogSchema = z
+  .object({
+    id: z.string().uuid(),
+    actorUserId: z.string().uuid().nullable(),
+    eventType: z.string(),
+    severity: z.enum(['INFO', 'WARN', 'ERROR']),
+    resourceType: z.string().nullable(),
+    resourceId: z.string().nullable(),
+    metadata: z.unknown(),
+    createdAt: z.string().datetime()
+  })
+  .openapi('EventLog')
+
+export const ListAuditLogsResponseSchema = z
+  .object({
+    auditLogs: z.array(AuditLogSchema),
+    page: z.number(),
+    perPage: z.number(),
+    total: z.number()
+  })
+  .openapi('ListAuditLogsResponse')
+
+export const ListEventLogsResponseSchema = z
+  .object({
+    eventLogs: z.array(EventLogSchema),
+    page: z.number(),
+    perPage: z.number(),
+    total: z.number()
+  })
+  .openapi('ListEventLogsResponse')
+
 export type ListUsersQuery = z.infer<typeof ListUsersQuerySchema>
+export type CreateBackofficeUserRequest = z.infer<typeof CreateBackofficeUserRequestSchema>
+export type UpdateBackofficeUserRequest = z.infer<typeof UpdateBackofficeUserRequestSchema>
+export type SetUserPermissionOverridesRequest = z.infer<
+  typeof SetUserPermissionOverridesRequestSchema
+>
 export type CreateWorkLocationRequest = z.infer<typeof CreateWorkLocationRequestSchema>
 export type UpdateWorkLocationRequest = z.infer<typeof UpdateWorkLocationRequestSchema>
 export type SetEmployeeWorkAreaRequest = z.infer<typeof SetEmployeeWorkAreaRequestSchema>
+export type LogsQuery = z.infer<typeof LogsQuerySchema>

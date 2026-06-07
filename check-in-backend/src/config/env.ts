@@ -15,8 +15,8 @@ const envSchema = z.object({
   INTERNAL_API_SECRET: z.string().min(16).optional(),
   CRON_SECRET: z.string().min(16).optional(),
   SUPABASE_URL: z.string().url(),
-  SUPABASE_ANON_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional()
+  SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
+  SUPABASE_SECRET_KEY: z.string().min(1)
 })
 
 const parsed = envSchema.safeParse(process.env)

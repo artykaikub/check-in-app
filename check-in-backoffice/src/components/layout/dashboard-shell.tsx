@@ -1,101 +1,173 @@
 'use client'
 
+import { useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle,
   CalendarCheck,
   CircleDollarSign,
+  ClipboardList,
   LogOut,
   MapPinned,
-  PanelLeft,
   Users
 } from 'lucide-react'
 import Link from 'next/link'
+import type { Route } from 'next'
 import { usePathname, useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import { EmptyState } from '@/components/data/empty-state'
+import { LanguageSwitcher } from '@/components/i18n/language-switcher'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { clearStoredSession } from '@/lib/api/session'
-import { cn } from '@/lib/utils'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger
+} from '@/components/ui/sidebar'
+import { ApiError } from '@/lib/api/fetch-json'
+import { getAuthMe } from '@/lib/api/auth'
+import { clearStoredSession, getStoredSession } from '@/lib/api/session'
+import { useI18n } from '@/lib/i18n'
+import { hasPermission, permissions } from '@/lib/permissions'
 
 const navigation = [
   {
-    label: 'Users',
+    labelKey: 'nav.users',
     href: '/dashboard/users',
-    icon: Users
+    icon: Users,
+    permission: permissions.usersRead
   },
   {
-    label: 'Work areas',
+    labelKey: 'nav.workAreas',
     href: '/dashboard/work-areas',
-    icon: MapPinned
+    icon: MapPinned,
+    permission: permissions.workAreasRead
   },
   {
-    label: 'Attendance',
+    labelKey: 'nav.attendance',
     href: '/dashboard/attendance',
-    icon: CalendarCheck
+    icon: CalendarCheck,
+    permission: permissions.attendanceRead
   },
   {
-    label: 'Emergency',
+    labelKey: 'nav.emergency',
     href: '/dashboard/emergency',
-    icon: AlertTriangle
+    icon: AlertTriangle,
+    permission: permissions.emergencyRead
   },
   {
-    label: 'Salary',
+    labelKey: 'nav.salary',
     href: '/dashboard/salary',
-    icon: CircleDollarSign
+    icon: CircleDollarSign,
+    permission: permissions.salaryRead
+  },
+  {
+    labelKey: 'nav.logs',
+    href: '/dashboard/logs',
+    icon: ClipboardList,
+    permission: permissions.logsRead
   }
 ] as const
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+  const { t } = useI18n()
+  const profileQuery = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: getAuthMe,
+    retry: false
+  })
+
+  useEffect(() => {
+    if (!getStoredSession()) {
+      router.replace('/login')
+    }
+  }, [router])
+
+  useEffect(() => {
+    if (profileQuery.error instanceof ApiError && profileQuery.error.status === 401) {
+      clearStoredSession()
+      router.replace('/login')
+    }
+  }, [profileQuery.error, router])
 
   function handleSignOut() {
     clearStoredSession()
     router.replace('/login')
   }
 
+  const visibleNavigation = navigation.filter((item) =>
+    hasPermission(profileQuery.data?.user, item.permission)
+  )
+  const currentNavigationItem = navigation.find((item) => pathname === item.href)
+  const canAccessCurrentRoute =
+    !currentNavigationItem || hasPermission(profileQuery.data?.user, currentNavigationItem.permission)
+  const shouldCheckRoutePermission = Boolean(currentNavigationItem)
+
   return (
-    <div className="min-h-svh bg-background">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r bg-card md:flex md:flex-col">
-        <div className="flex h-14 items-center gap-2 px-4">
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader className="h-14 flex-row items-center gap-2 border-b px-4 py-0">
           <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <PanelLeft className="size-4" />
+            <Users className="size-4" />
           </div>
           <span className="text-sm font-semibold">Check-in</span>
-        </div>
-        <Separator />
-        <nav className="flex flex-1 flex-col gap-1 p-3">
-          {navigation.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground',
-                pathname === item.href && 'bg-accent text-accent-foreground'
-              )}
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="p-3">
-          <Button variant="ghost" className="w-full justify-start" onClick={handleSignOut}>
-            <LogOut className="size-4" />
-            Sign out
-          </Button>
-        </div>
-      </aside>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {visibleNavigation.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={pathname === item.href}>
+                      <Link href={item.href as Route}>
+                        <item.icon className="size-4" />
+                        <span>{t(item.labelKey)}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
 
-      <div className="md:pl-64">
+      <SidebarInset>
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur md:px-6">
-          <span className="text-sm font-medium">Backoffice</span>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            <LogOut className="size-4" />
-            <span className="hidden sm:inline">Sign out</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <SidebarTrigger />
+            <span className="text-sm font-medium">
+              {profileQuery.data?.user.fullName ??
+                profileQuery.data?.user.email ??
+                t('shell.backoffice')}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="size-4" />
+              <span className="hidden sm:inline">{t('nav.signOut')}</span>
+            </Button>
+          </div>
         </header>
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 md:px-6">{children}</main>
-      </div>
-    </div>
+        <main className="mx-auto w-full max-w-7xl px-4 py-6 md:px-6">
+          {shouldCheckRoutePermission && profileQuery.isLoading ? (
+            <EmptyState label={t('common.loading')} />
+          ) : canAccessCurrentRoute ? (
+            children
+          ) : (
+            <EmptyState label={t('common.noAccess')} />
+          )}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

@@ -16,12 +16,10 @@ const supabaseClientOptions = {
   }
 } satisfies SupabaseOptions
 
-export const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+export const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_KEY, {
   ...supabaseClientOptions
 })
 
-export const supabaseAdmin = env.SUPABASE_SERVICE_ROLE_KEY
-  ? createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-      ...supabaseClientOptions
-    })
-  : null
+export const supabaseAdmin = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY, {
+  ...supabaseClientOptions
+})

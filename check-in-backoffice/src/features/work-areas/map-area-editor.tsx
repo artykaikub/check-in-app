@@ -1,10 +1,14 @@
 'use client'
 
 import type * as Leaflet from 'leaflet'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { LatLngNode } from '@/generated/api/model'
+import { useI18n } from '@/lib/i18n'
+import { cn } from '@/lib/utils'
 
 const bangkokNodes: LatLngNode[] = [
   { lat: 13.758, lng: 100.527 },
@@ -38,6 +42,7 @@ type MapAreaEditorProps = {
 }
 
 export function MapAreaEditor({ value, onChange }: MapAreaEditorProps) {
+  const { t } = useI18n()
   const mapElementRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Leaflet.Map | null>(null)
   const leafletRef = useRef<typeof Leaflet | null>(null)
@@ -47,10 +52,9 @@ export function MapAreaEditor({ value, onChange }: MapAreaEditorProps) {
   const nodesRef = useRef<LatLngNode[]>(value.length === 4 ? value : bangkokNodes)
   const onChangeRef = useRef(onChange)
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [isMapReady, setIsMapReady] = useState(false)
 
   const nodes = value.length === 4 ? value : bangkokNodes
-  const center = useMemo(() => getCenter(nodes), [nodes])
-  const initialCenterRef = useRef(center)
 
   useEffect(() => {
     nodesRef.current = nodes
@@ -72,12 +76,13 @@ export function MapAreaEditor({ value, onChange }: MapAreaEditorProps) {
       }
 
       leafletRef.current = leaflet
+      const currentCenter = getCenter(nodesRef.current)
       const map = leaflet
         .map(mapElementRef.current, {
           zoomControl: true,
           attributionControl: true
         })
-        .setView([initialCenterRef.current.lat, initialCenterRef.current.lng], 17)
+        .setView([currentCenter.lat, currentCenter.lng], 17)
 
       leaflet
         .tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -96,6 +101,7 @@ export function MapAreaEditor({ value, onChange }: MapAreaEditorProps) {
       })
 
       mapRef.current = map
+      setIsMapReady(true)
     }
 
     bootMap()
@@ -104,6 +110,7 @@ export function MapAreaEditor({ value, onChange }: MapAreaEditorProps) {
       isMounted = false
       mapRef.current?.remove()
       mapRef.current = null
+      setIsMapReady(false)
       polygonRef.current = null
       markersRef.current = []
     }
@@ -117,7 +124,7 @@ export function MapAreaEditor({ value, onChange }: MapAreaEditorProps) {
     const leaflet = leafletRef.current
     const map = mapRef.current
 
-    if (!leaflet || !map) {
+    if (!leaflet || !map || !isMapReady) {
       return
     }
 
@@ -150,21 +157,25 @@ export function MapAreaEditor({ value, onChange }: MapAreaEditorProps) {
         .addTo(map)
 
       marker.on('click', () => setSelectedIndex(index))
-      marker.on('dragend', () => {
+      marker.on('drag', () => {
         const latLng = marker.getLatLng()
-        const nextNodes = [...nodes]
+        const nextNodes = [...nodesRef.current]
         nextNodes[index] = {
           lat: Number(latLng.lat.toFixed(6)),
           lng: Number(latLng.lng.toFixed(6))
         }
-        onChange(nextNodes)
+        nodesRef.current = nextNodes
+        polygonRef.current?.setLatLngs(nextNodes.map((node) => [node.lat, node.lng]))
+      })
+      marker.on('dragend', () => {
+        onChangeRef.current(nodesRef.current)
       })
 
       return marker
     })
 
     map.fitBounds(polygonRef.current.getBounds(), { padding: [24, 24], maxZoom: 18 })
-  }, [nodes, onChange])
+  }, [isMapReady, nodes, onChange])
 
   function updateNode(index: number, key: keyof LatLngNode, rawValue: string) {
     const parsed = Number(rawValue)
@@ -186,23 +197,34 @@ export function MapAreaEditor({ value, onChange }: MapAreaEditorProps) {
     <div className="grid gap-4">
       <div
         ref={mapElementRef}
-        className="h-[360px] overflow-hidden rounded-md border bg-muted"
-        aria-label="Work area map"
+        className="isolate h-[360px] overflow-hidden rounded-md border bg-muted"
+        aria-label={t('workAreas.mapLabel')}
       />
       <div className="grid gap-3 md:grid-cols-2">
         {nodes.map((node, index) => (
-          <button
+          <Card
             key={index}
-            type="button"
-            className={`rounded-md border p-3 text-left ${
+            className={cn(
+              'gap-3 p-3',
               selectedIndex === index ? 'border-primary bg-accent' : 'bg-background'
-            }`}
-            onClick={() => setSelectedIndex(index)}
+            )}
           >
-            <div className="mb-2 text-sm font-medium">Node {index + 1}</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-sm font-medium">
+                {t('workAreas.node')} {index + 1}
+              </div>
+              <Button
+                type="button"
+                variant={selectedIndex === index ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedIndex(index)}
+              >
+                {t('common.select')}
+              </Button>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="grid gap-1">
-                <Label htmlFor={`node-${index}-lat`}>Lat</Label>
+                <Label htmlFor={`node-${index}-lat`}>{t('workAreas.lat')}</Label>
                 <Input
                   id={`node-${index}-lat`}
                   inputMode="decimal"
@@ -211,7 +233,7 @@ export function MapAreaEditor({ value, onChange }: MapAreaEditorProps) {
                 />
               </div>
               <div className="grid gap-1">
-                <Label htmlFor={`node-${index}-lng`}>Lng</Label>
+                <Label htmlFor={`node-${index}-lng`}>{t('workAreas.lng')}</Label>
                 <Input
                   id={`node-${index}-lng`}
                   inputMode="decimal"
@@ -220,7 +242,7 @@ export function MapAreaEditor({ value, onChange }: MapAreaEditorProps) {
                 />
               </div>
             </div>
-          </button>
+          </Card>
         ))}
       </div>
     </div>

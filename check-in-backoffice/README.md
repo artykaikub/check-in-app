@@ -29,11 +29,12 @@ The codegen script builds the backend, exports its OpenAPI document into `src/ge
 
 ## Modules
 
-- Users: employee list and mobile device reset action
+- Users: employee list, create user, role updates, permission overrides, and mobile device reset action
 - Work areas: work locations and employee four-point geofence editor
 - Attendance: daily check-in/check-out review with photo links
 - Emergency: emergency event queue and response status updates
 - Salary: Excel signed upload, import trigger, upload batches, and salary records
+- Logs: audit and event log review
 
 ## Map
 

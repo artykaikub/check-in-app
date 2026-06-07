@@ -54,6 +54,14 @@ export const AttendanceDaySchema = z
   .object({
     id: z.string().uuid(),
     userId: z.string().uuid(),
+    user: z
+      .object({
+        id: z.string().uuid(),
+        email: z.string().email().nullable(),
+        fullName: z.string().nullable(),
+        employeeCode: z.string().nullable()
+      })
+      .nullable(),
     workDate: z.string(),
     reviewStatus: AttendanceReviewStatusSchema,
     reviewNote: z.string().nullable(),

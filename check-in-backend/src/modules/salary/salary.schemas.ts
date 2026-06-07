@@ -25,6 +25,14 @@ export const ImportSalaryRequestSchema = z
   })
   .openapi('ImportSalaryRequest')
 
+export const SalaryUploadBatchIdParamSchema = z.object({
+  uploadBatchId: z.string().uuid()
+})
+
+export const SalaryRecordIdParamSchema = z.object({
+  salaryRecordId: z.string().uuid()
+})
+
 export const SalaryUploadBatchSchema = z
   .object({
     id: z.string().uuid(),
@@ -95,6 +103,20 @@ export const ListSalaryRecordsResponseSchema = z
     total: z.number()
   })
   .openapi('ListSalaryRecordsResponse')
+
+export const DeleteSalaryUploadResponseSchema = z
+  .object({
+    deletedUploadBatchId: z.string().uuid(),
+    deletedSalaryRecords: z.number()
+  })
+  .openapi('DeleteSalaryUploadResponse')
+
+export const DeleteSalaryRecordResponseSchema = z
+  .object({
+    deletedSalaryRecordId: z.string().uuid(),
+    uploadBatchId: z.string().uuid()
+  })
+  .openapi('DeleteSalaryRecordResponse')
 
 export type CreateSalaryUploadUrlRequest = z.infer<typeof CreateSalaryUploadUrlRequestSchema>
 export type ImportSalaryRequest = z.infer<typeof ImportSalaryRequestSchema>

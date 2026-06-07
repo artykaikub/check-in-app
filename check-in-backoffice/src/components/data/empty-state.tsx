@@ -1,7 +1,15 @@
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader
+} from '@/components/ui/empty'
+
 export function EmptyState({ label }: { label: string }) {
   return (
-    <div className="rounded-md border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-      {label}
-    </div>
+    <Empty className="border">
+      <EmptyHeader>
+        <EmptyDescription>{label}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   )
 }

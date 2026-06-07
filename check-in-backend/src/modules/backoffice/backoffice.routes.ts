@@ -30,50 +30,70 @@ import {
 import {
   CreateSalaryUploadUrlRequestSchema,
   CreateSalaryUploadUrlResponseSchema,
+  DeleteSalaryRecordResponseSchema,
+  DeleteSalaryUploadResponseSchema,
   ImportSalaryRequestSchema,
   ImportSalaryResponseSchema,
   ListSalaryRecordsQuerySchema,
   ListSalaryRecordsResponseSchema,
   ListSalaryUploadsQuerySchema,
-  ListSalaryUploadsResponseSchema
+  ListSalaryUploadsResponseSchema,
+  SalaryRecordIdParamSchema,
+  SalaryUploadBatchIdParamSchema
 } from '../salary/salary.schemas.js'
 import {
   createSalaryUploadUrl,
+  deleteSalaryRecord,
+  deleteSalaryUpload,
   importSalaryUpload,
   listSalaryRecords,
   listSalaryUploads
 } from '../salary/salary.service.js'
 import { ErrorResponseSchema } from '../../shared/schemas/common.js'
 import type { AppEnv } from '../../types/hono.js'
-import { mapProfile } from '../auth/auth.service.js'
 import {
-  BackofficeProfileResponseSchema,
+  BackofficeUserResponseSchema,
+  CreateBackofficeUserRequestSchema,
   CreateWorkLocationRequestSchema,
   EmployeeWorkAreaResponseSchema,
   GetUserDeviceResponseSchema,
+  ListAuditLogsResponseSchema,
+  ListEventLogsResponseSchema,
   ListPermissionsResponseSchema,
   ListRolesResponseSchema,
   ListUsersQuerySchema,
   ListUsersResponseSchema,
   ListWorkLocationsResponseSchema,
+  LogsQuerySchema,
   ResetDeviceRequestSchema,
   ResetDeviceResponseSchema,
+  SetUserPermissionOverridesRequestSchema,
   SetEmployeeWorkAreaRequestSchema,
+  UpdateBackofficeUserRequestSchema,
+  UserEffectivePermissionsResponseSchema,
+  UserPermissionOverridesResponseSchema,
   UpdateWorkLocationRequestSchema,
   UuidParamSchema,
   WorkLocationIdParamSchema,
   WorkLocationResponseSchema
 } from './backoffice.schemas.js'
 import {
+  createBackofficeUser,
   createWorkLocation,
+  getUserEffectivePermissions,
+  getUserPermissionOverrides,
   getUserDevice,
   getUserWorkArea,
+  listAuditLogs,
+  listEventLogs,
   listPermissions,
   listRoles,
   listUsers,
   listWorkLocations,
   resetUserDevice,
+  setUserPermissionOverrides,
   setUserWorkArea,
+  updateBackofficeUser,
   updateWorkLocation
 } from './backoffice.service.js'
 
@@ -84,6 +104,12 @@ backofficeRoutes.use('*', requireAuth)
 function ensurePermission(c: Context<AppEnv>, permission: string) {
   if (!c.get('currentUser').permissions.includes(permission)) {
     throw forbidden(`Missing permission: ${permission}`)
+  }
+}
+
+function ensurePermissions(c: Context<AppEnv>, requiredPermissions: string[]) {
+  for (const permission of requiredPermissions) {
+    ensurePermission(c, permission)
   }
 }
 
@@ -105,28 +131,6 @@ const commonErrorResponses = {
     }
   }
 }
-
-const profileRoute = createRoute({
-  method: 'get',
-  path: '/profile',
-  operationId: 'getBackofficeProfile',
-  tags: ['Backoffice'],
-  responses: {
-    200: {
-      description: 'Current authenticated profile',
-      content: {
-        'application/json': {
-          schema: BackofficeProfileResponseSchema
-        }
-      }
-    },
-    ...commonErrorResponses
-  }
-})
-
-backofficeRoutes.openapi(profileRoute, (c) => {
-  return c.json({ user: mapProfile(c.get('currentUser')) }, 200)
-})
 
 const listUsersRoute = createRoute({
   method: 'get',
@@ -153,6 +157,105 @@ backofficeRoutes.openapi(listUsersRoute, async (c) => {
   ensurePermission(c, permissions.usersRead)
   const query = c.req.valid('query')
   return c.json(await listUsers(query), 200)
+})
+
+const createUserRoute = createRoute({
+  method: 'post',
+  path: '/users',
+  operationId: 'createBackofficeUser',
+  tags: ['Backoffice'],
+  request: {
+    body: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: CreateBackofficeUserRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    201: {
+      description: 'User created',
+      content: {
+        'application/json': {
+          schema: BackofficeUserResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+backofficeRoutes.openapi(createUserRoute, async (c) => {
+  ensurePermissions(c, [permissions.usersCreate, permissions.rolesAssign])
+  return c.json(
+    await createBackofficeUser({
+      payload: c.req.valid('json'),
+      actorUserId: c.get('currentUser').id,
+      c
+    }),
+    201
+  )
+})
+
+const updateUserRoute = createRoute({
+  method: 'patch',
+  path: '/users/{userId}',
+  operationId: 'updateBackofficeUser',
+  tags: ['Backoffice'],
+  request: {
+    params: UuidParamSchema,
+    body: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: UpdateBackofficeUserRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: 'User updated',
+      content: {
+        'application/json': {
+          schema: BackofficeUserResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+backofficeRoutes.openapi(updateUserRoute, async (c) => {
+  const { userId } = c.req.valid('param')
+  const payload = c.req.valid('json')
+  const requiredPermissions = new Set<string>()
+
+  if (
+    payload.fullName !== undefined ||
+    payload.employeeCode !== undefined ||
+    payload.isActive !== undefined
+  ) {
+    requiredPermissions.add(permissions.usersUpdate)
+  }
+
+  if (payload.roleId !== undefined) {
+    requiredPermissions.add(permissions.rolesAssign)
+  }
+
+  ensurePermissions(c, Array.from(requiredPermissions))
+
+  return c.json(
+    await updateBackofficeUser({
+      userId,
+      payload,
+      actorUserId: c.get('currentUser').id,
+      c
+    }),
+    200
+  )
 })
 
 const listRolesRoute = createRoute({
@@ -226,6 +329,103 @@ backofficeRoutes.openapi(getUserDeviceRoute, async (c) => {
   ensurePermission(c, permissions.usersRead)
   const { userId } = c.req.valid('param')
   return c.json(await getUserDevice(userId), 200)
+})
+
+const getUserPermissionOverridesRoute = createRoute({
+  method: 'get',
+  path: '/users/{userId}/permissions',
+  operationId: 'getUserPermissionOverrides',
+  tags: ['Backoffice'],
+  request: {
+    params: UuidParamSchema
+  },
+  responses: {
+    200: {
+      description: 'User permission overrides',
+      content: {
+        'application/json': {
+          schema: UserPermissionOverridesResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+backofficeRoutes.openapi(getUserPermissionOverridesRoute, async (c) => {
+  ensurePermission(c, permissions.permissionsRead)
+  const { userId } = c.req.valid('param')
+  return c.json(await getUserPermissionOverrides(userId), 200)
+})
+
+const getUserEffectivePermissionsRoute = createRoute({
+  method: 'get',
+  path: '/users/{userId}/effective-permissions',
+  operationId: 'getUserEffectivePermissions',
+  tags: ['Backoffice'],
+  request: {
+    params: UuidParamSchema
+  },
+  responses: {
+    200: {
+      description: 'User effective permissions',
+      content: {
+        'application/json': {
+          schema: UserEffectivePermissionsResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+backofficeRoutes.openapi(getUserEffectivePermissionsRoute, async (c) => {
+  ensurePermission(c, permissions.permissionsRead)
+  const { userId } = c.req.valid('param')
+  return c.json(await getUserEffectivePermissions(userId), 200)
+})
+
+const setUserPermissionOverridesRoute = createRoute({
+  method: 'put',
+  path: '/users/{userId}/permissions',
+  operationId: 'setUserPermissionOverrides',
+  tags: ['Backoffice'],
+  request: {
+    params: UuidParamSchema,
+    body: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: SetUserPermissionOverridesRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description: 'User permission overrides set',
+      content: {
+        'application/json': {
+          schema: UserPermissionOverridesResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+backofficeRoutes.openapi(setUserPermissionOverridesRoute, async (c) => {
+  ensurePermission(c, permissions.permissionsUpdate)
+  const { userId } = c.req.valid('param')
+  return c.json(
+    await setUserPermissionOverrides({
+      userId,
+      payload: c.req.valid('json'),
+      actorUserId: c.get('currentUser').id,
+      c
+    }),
+    200
+  )
 })
 
 const resetUserDeviceRoute = createRoute({
@@ -748,6 +948,40 @@ backofficeRoutes.openapi(listSalaryUploadsRoute, async (c) => {
   return c.json(await listSalaryUploads(c.req.valid('query')), 200)
 })
 
+const deleteSalaryUploadRoute = createRoute({
+  method: 'delete',
+  path: '/salary/uploads/{uploadBatchId}',
+  operationId: 'deleteSalaryUpload',
+  tags: ['Backoffice'],
+  request: {
+    params: SalaryUploadBatchIdParamSchema
+  },
+  responses: {
+    200: {
+      description: 'Salary upload batch and imported records deleted',
+      content: {
+        'application/json': {
+          schema: DeleteSalaryUploadResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+backofficeRoutes.openapi(deleteSalaryUploadRoute, async (c) => {
+  ensurePermission(c, permissions.salaryDelete)
+  const { uploadBatchId } = c.req.valid('param')
+  return c.json(
+    await deleteSalaryUpload({
+      uploadBatchId,
+      deletedBy: c.get('currentUser').id,
+      c
+    }),
+    200
+  )
+})
+
 const listSalaryRecordsRoute = createRoute({
   method: 'get',
   path: '/salary/records',
@@ -772,4 +1006,90 @@ const listSalaryRecordsRoute = createRoute({
 backofficeRoutes.openapi(listSalaryRecordsRoute, async (c) => {
   ensurePermission(c, permissions.salaryRead)
   return c.json(await listSalaryRecords(c.req.valid('query')), 200)
+})
+
+const deleteSalaryRecordRoute = createRoute({
+  method: 'delete',
+  path: '/salary/records/{salaryRecordId}',
+  operationId: 'deleteSalaryRecord',
+  tags: ['Backoffice'],
+  request: {
+    params: SalaryRecordIdParamSchema
+  },
+  responses: {
+    200: {
+      description: 'Salary record deleted',
+      content: {
+        'application/json': {
+          schema: DeleteSalaryRecordResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+backofficeRoutes.openapi(deleteSalaryRecordRoute, async (c) => {
+  ensurePermission(c, permissions.salaryDelete)
+  const { salaryRecordId } = c.req.valid('param')
+  return c.json(
+    await deleteSalaryRecord({
+      salaryRecordId,
+      deletedBy: c.get('currentUser').id,
+      c
+    }),
+    200
+  )
+})
+
+const listAuditLogsRoute = createRoute({
+  method: 'get',
+  path: '/audit-logs',
+  operationId: 'listAuditLogs',
+  tags: ['Backoffice'],
+  request: {
+    query: LogsQuerySchema
+  },
+  responses: {
+    200: {
+      description: 'Audit logs list',
+      content: {
+        'application/json': {
+          schema: ListAuditLogsResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+backofficeRoutes.openapi(listAuditLogsRoute, async (c) => {
+  ensurePermission(c, permissions.logsRead)
+  return c.json(await listAuditLogs(c.req.valid('query')), 200)
+})
+
+const listEventLogsRoute = createRoute({
+  method: 'get',
+  path: '/event-logs',
+  operationId: 'listEventLogs',
+  tags: ['Backoffice'],
+  request: {
+    query: LogsQuerySchema
+  },
+  responses: {
+    200: {
+      description: 'Event logs list',
+      content: {
+        'application/json': {
+          schema: ListEventLogsResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+backofficeRoutes.openapi(listEventLogsRoute, async (c) => {
+  ensurePermission(c, permissions.logsRead)
+  return c.json(await listEventLogs(c.req.valid('query')), 200)
 })
