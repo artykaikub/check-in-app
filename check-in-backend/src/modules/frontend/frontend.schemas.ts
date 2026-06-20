@@ -1,11 +1,61 @@
 import { z } from '@hono/zod-openapi'
 import { UserSchema } from '../../shared/schemas/common.js'
+import { AttendanceDaySchema } from '../attendance/attendance.schemas.js'
+import {
+  EmployeeWorkAreaSchema,
+  WorkLocationSchema
+} from '../backoffice/backoffice.schemas.js'
+import { SalaryRecordSchema } from '../salary/salary.schemas.js'
 
 export const FrontendProfileResponseSchema = z
   .object({
     user: UserSchema
   })
   .openapi('FrontendProfileResponse')
+
+export const ListFrontendAttendanceQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  perPage: z.coerce.number().int().min(1).max(100).default(30),
+  dateFrom: z.string().date().optional(),
+  dateTo: z.string().date().optional()
+})
+
+export const ListFrontendAttendanceResponseSchema = z
+  .object({
+    attendanceDays: z.array(AttendanceDaySchema),
+    page: z.number(),
+    perPage: z.number(),
+    total: z.number()
+  })
+  .openapi('ListFrontendAttendanceResponse')
+
+export const ListFrontendPayslipsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  perPage: z.coerce.number().int().min(1).max(100).default(24),
+  periodMonth: z
+    .string()
+    .regex(/^[0-9]{4}-[0-9]{2}$/)
+    .optional()
+})
+
+export const ListFrontendPayslipsResponseSchema = z
+  .object({
+    payslips: z.array(SalaryRecordSchema),
+    page: z.number(),
+    perPage: z.number(),
+    total: z.number()
+  })
+  .openapi('ListFrontendPayslipsResponse')
+
+export const FrontendWorkAreaResponseSchema = z
+  .object({
+    workArea: EmployeeWorkAreaSchema.nullable(),
+    workLocation: WorkLocationSchema.nullable()
+  })
+  .openapi('FrontendWorkAreaResponse')
+
+export type ListFrontendAttendanceQuery = z.infer<typeof ListFrontendAttendanceQuerySchema>
+export type ListFrontendPayslipsQuery = z.infer<typeof ListFrontendPayslipsQuerySchema>
 
 export const CreateCheckInRequestSchema = z
   .object({

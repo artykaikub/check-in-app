@@ -1,21 +1,24 @@
 {
-  "name": "check-in-app",
+  "name": "check-in-monorepo",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "workspaces": [
     "check-in-backend",
-    "check-in-backoffice"
+    "check-in-backoffice",
+    "check-in-app"
   ],
   "scripts": {
-    "dev": "pnpm --parallel --filter check-in-backend --filter check-in-backoffice dev",
+    "dev": "pnpm --parallel --filter check-in-backend --filter check-in-backoffice --filter check-in-app dev",
     "dev:backend": "pnpm --filter check-in-backend dev",
     "dev:backoffice": "pnpm --filter check-in-backoffice dev",
+    "dev:app": "pnpm --filter check-in-app dev",
     "build": "pnpm -r build",
     "start": "pnpm --filter check-in-backend start",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "codegen": "pnpm --filter check-in-backoffice codegen",
+    "codegen:app": "pnpm --filter check-in-app codegen",
     "db:link": "pnpm --filter check-in-backend db:link",
     "db:push": "pnpm --filter check-in-backend db:push",
     "db:seed": "pnpm --filter check-in-backend db:seed",

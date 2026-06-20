@@ -7,8 +7,14 @@ import { mapProfile } from '../auth/auth.service.js'
 import {
   CreateCheckInResponseSchema,
   CreateCheckInRequestSchema,
-  FrontendProfileResponseSchema
+  FrontendProfileResponseSchema,
+  FrontendWorkAreaResponseSchema,
+  ListFrontendAttendanceQuerySchema,
+  ListFrontendAttendanceResponseSchema,
+  ListFrontendPayslipsQuerySchema,
+  ListFrontendPayslipsResponseSchema
 } from './frontend.schemas.js'
+import { getOwnWorkArea, listOwnAttendance, listOwnPayslips } from './frontend.service.js'
 
 export const frontendRoutes = new OpenAPIHono<AppEnv>()
 
@@ -92,4 +98,109 @@ frontendRoutes.openapi(createCheckInRoute, (c) => {
     },
     201
   )
+})
+
+const listAttendanceRoute = createRoute({
+  method: 'get',
+  path: '/attendance',
+  operationId: 'listFrontendAttendance',
+  tags: ['Frontend'],
+  request: {
+    query: ListFrontendAttendanceQuerySchema
+  },
+  responses: {
+    200: {
+      description: "Current user's attendance days, newest first",
+      content: {
+        'application/json': {
+          schema: ListFrontendAttendanceResponseSchema
+        }
+      }
+    },
+    401: {
+      description: 'Missing or invalid access token',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+frontendRoutes.openapi(listAttendanceRoute, async (c) => {
+  return c.json(
+    await listOwnAttendance({
+      userId: c.get('currentUser').id,
+      query: c.req.valid('query')
+    }),
+    200
+  )
+})
+
+const listPayslipsRoute = createRoute({
+  method: 'get',
+  path: '/payslips',
+  operationId: 'listFrontendPayslips',
+  tags: ['Frontend'],
+  request: {
+    query: ListFrontendPayslipsQuerySchema
+  },
+  responses: {
+    200: {
+      description: "Current user's salary records (payslips), newest period first",
+      content: {
+        'application/json': {
+          schema: ListFrontendPayslipsResponseSchema
+        }
+      }
+    },
+    401: {
+      description: 'Missing or invalid access token',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+frontendRoutes.openapi(listPayslipsRoute, async (c) => {
+  return c.json(
+    await listOwnPayslips({
+      userId: c.get('currentUser').id,
+      query: c.req.valid('query')
+    }),
+    200
+  )
+})
+
+const workAreaRoute = createRoute({
+  method: 'get',
+  path: '/work-area',
+  operationId: 'getFrontendWorkArea',
+  tags: ['Frontend'],
+  responses: {
+    200: {
+      description: "Current user's assigned work area (geofence) + work location",
+      content: {
+        'application/json': {
+          schema: FrontendWorkAreaResponseSchema
+        }
+      }
+    },
+    401: {
+      description: 'Missing or invalid access token',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+frontendRoutes.openapi(workAreaRoute, async (c) => {
+  return c.json(await getOwnWorkArea(c.get('currentUser').id), 200)
 })

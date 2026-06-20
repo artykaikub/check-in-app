@@ -159,8 +159,17 @@ async function mapAttendanceDay(
   day: AttendanceDayRow,
   events: AttendanceEventRow[] = []
 ) {
-  const checkInEvent = events.find((event) => event.id === day.check_in_event_id) ?? null
-  const checkOutEvent = events.find((event) => event.id === day.check_out_event_id) ?? null
+  // A day may contain multiple alternating CHECK_IN/CHECK_OUT cycles. Expose the
+  // full ordered list, and keep `checkIn`/`checkOut` as the day's first check-in
+  // and last check-out for backoffice daily-summary continuity.
+  const ordered = [...events].sort(
+    (a, b) => new Date(a.captured_at).getTime() - new Date(b.captured_at).getTime()
+  )
+  const mapped = await Promise.all(
+    ordered.map(async (event) => mapEvent(event, await createSignedReadUrl(event.photo_path)))
+  )
+  const checkIns = mapped.filter((event) => event.type === 'CHECK_IN')
+  const checkOuts = mapped.filter((event) => event.type === 'CHECK_OUT')
 
   return {
     id: day.id,
@@ -169,12 +178,9 @@ async function mapAttendanceDay(
     workDate: day.work_date,
     reviewStatus: day.review_status,
     reviewNote: day.review_note,
-    checkIn: checkInEvent
-      ? mapEvent(checkInEvent, await createSignedReadUrl(checkInEvent.photo_path))
-      : null,
-    checkOut: checkOutEvent
-      ? mapEvent(checkOutEvent, await createSignedReadUrl(checkOutEvent.photo_path))
-      : null,
+    checkIn: checkIns[0] ?? null,
+    checkOut: checkOuts[checkOuts.length - 1] ?? null,
+    events: mapped,
     createdAt: day.created_at
   }
 }
@@ -199,19 +205,30 @@ async function assertAttendanceActionAllowed(userId: string, eventType: Attendan
   const workDate = getBangkokDate()
   const day = await getAttendanceDayForDate(userId, workDate)
 
-  if (eventType === 'CHECK_IN' && day?.check_in_event_id) {
-    throw badRequest('Check-in already exists for today')
-  }
+  // Multiple check-in/check-out cycles per day are allowed; they must alternate.
+  // The next action is decided by the most recent event of the day.
+  const lastType = day ? await getLastEventType(day.id) : null
 
-  if (eventType === 'CHECK_OUT') {
-    if (!day?.check_in_event_id) {
-      throw badRequest('Check-in is required before check-out')
+  if (eventType === 'CHECK_IN') {
+    if (lastType === 'CHECK_IN') {
+      throw badRequest('You are already checked in')
     }
-
-    if (day.check_out_event_id) {
-      throw badRequest('Check-out already exists for today')
-    }
+  } else if (lastType !== 'CHECK_IN') {
+    throw badRequest('Check-in is required before check-out')
   }
+}
+
+async function getLastEventType(
+  attendanceDayId: string
+): Promise<AttendanceEventType | null> {
+  const events = await getAttendanceEventsForDay(attendanceDayId)
+  if (events.length === 0) {
+    return null
+  }
+  const latest = events.reduce((acc, event) =>
+    new Date(event.captured_at).getTime() > new Date(acc.captured_at).getTime() ? event : acc
+  )
+  return latest.event_type
 }
 
 async function getActiveWorkArea(userId: string) {
@@ -390,16 +407,29 @@ export async function confirmAttendance(input: {
   }
 
   const event = eventInsert.data as AttendanceEventRow
-  const dayUpdateColumn = input.eventType === 'CHECK_IN' ? 'check_in_event_id' : 'check_out_event_id'
-  const { data: updatedDay, error: updateError } = await supabaseAdmin
-    .from('attendance_days')
-    .update({ [dayUpdateColumn]: event.id })
-    .eq('id', day.id)
-    .select('id,user_id,work_date,check_in_event_id,check_out_event_id,review_status,review_note,created_at')
-    .single()
+  // Keep the day's `check_in_event_id` pinned to the FIRST check-in and advance
+  // `check_out_event_id` to the latest check-out, so multiple cycles per day work
+  // while the daily summary stays first-in / last-out.
+  const dayUpdate: Record<string, string> =
+    input.eventType === 'CHECK_IN'
+      ? day.check_in_event_id
+        ? {}
+        : { check_in_event_id: event.id }
+      : { check_out_event_id: event.id }
 
-  if (updateError || !updatedDay) {
-    throw badRequest(updateError?.message ?? 'Unable to update attendance day')
+  let updatedDay: AttendanceDayRow = day
+  if (Object.keys(dayUpdate).length > 0) {
+    const { data, error: updateError } = await supabaseAdmin
+      .from('attendance_days')
+      .update(dayUpdate)
+      .eq('id', day.id)
+      .select('id,user_id,work_date,check_in_event_id,check_out_event_id,review_status,review_note,created_at')
+      .single()
+
+    if (updateError || !data) {
+      throw badRequest(updateError?.message ?? 'Unable to update attendance day')
+    }
+    updatedDay = data as AttendanceDayRow
   }
 
   await supabaseAdmin

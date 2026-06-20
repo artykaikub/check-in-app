@@ -67,6 +67,9 @@ export const AttendanceDaySchema = z
     reviewNote: z.string().nullable(),
     checkIn: AttendanceEventSchema.nullable(),
     checkOut: AttendanceEventSchema.nullable(),
+    /** All check-in/check-out events for the day, oldest first. A day may
+     *  contain multiple alternating CHECK_IN/CHECK_OUT cycles. */
+    events: z.array(AttendanceEventSchema),
     createdAt: z.string().datetime()
   })
   .openapi('AttendanceDay')
