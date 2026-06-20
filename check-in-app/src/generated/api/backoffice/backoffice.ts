@@ -31,6 +31,7 @@ import type {
   CreateSalaryUploadUrlRequest,
   CreateSalaryUploadUrlResponse,
   CreateWorkLocationRequest,
+  DeleteAreaInspectionResponse,
   DeleteSalaryRecordResponse,
   DeleteSalaryUploadResponse,
   EmergencyLogResponse,
@@ -39,6 +40,8 @@ import type {
   GetUserDeviceResponse,
   ImportSalaryRequest,
   ImportSalaryResponse,
+  ListAreaInspectionsParams,
+  ListAreaInspectionsResponse,
   ListAttendanceParams,
   ListAttendanceResponse,
   ListAuditLogsParams,
@@ -1503,6 +1506,166 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getReviewAttendanceMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    export const getListAreaInspectionsUrl = (params?: ListAreaInspectionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/backoffice/area-inspections?${stringifiedParams}` : `/api/backoffice/area-inspections`
+}
+
+export const listAreaInspections = async (params?: ListAreaInspectionsParams, options?: RequestInit): Promise<ListAreaInspectionsResponse> => {
+  
+  return customFetch<ListAreaInspectionsResponse>(getListAreaInspectionsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+export const getListAreaInspectionsQueryKey = (params?: ListAreaInspectionsParams,) => {
+    return [`/api/backoffice/area-inspections`, ...(params ? [params]: [])] as const;
+    }
+
+    
+export const getListAreaInspectionsQueryOptions = <TData = Awaited<ReturnType<typeof listAreaInspections>>, TError = ErrorResponse | ErrorResponse>(params?: ListAreaInspectionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAreaInspections>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAreaInspectionsQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAreaInspections>>> = ({ signal }) => listAreaInspections(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn,   staleTime: 30000, refetchOnWindowFocus: false,  ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAreaInspections>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAreaInspectionsQueryResult = NonNullable<Awaited<ReturnType<typeof listAreaInspections>>>
+export type ListAreaInspectionsQueryError = ErrorResponse | ErrorResponse
+
+
+export function useListAreaInspections<TData = Awaited<ReturnType<typeof listAreaInspections>>, TError = ErrorResponse | ErrorResponse>(
+ params: undefined |  ListAreaInspectionsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAreaInspections>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAreaInspections>>,
+          TError,
+          Awaited<ReturnType<typeof listAreaInspections>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAreaInspections<TData = Awaited<ReturnType<typeof listAreaInspections>>, TError = ErrorResponse | ErrorResponse>(
+ params?: ListAreaInspectionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAreaInspections>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAreaInspections>>,
+          TError,
+          Awaited<ReturnType<typeof listAreaInspections>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAreaInspections<TData = Awaited<ReturnType<typeof listAreaInspections>>, TError = ErrorResponse | ErrorResponse>(
+ params?: ListAreaInspectionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAreaInspections>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListAreaInspections<TData = Awaited<ReturnType<typeof listAreaInspections>>, TError = ErrorResponse | ErrorResponse>(
+ params?: ListAreaInspectionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAreaInspections>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAreaInspectionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+export const getDeleteAreaInspectionAdminUrl = (areaInspectionId: string,) => {
+
+
+  
+
+  return `/api/backoffice/area-inspections/${areaInspectionId}`
+}
+
+export const deleteAreaInspectionAdmin = async (areaInspectionId: string, options?: RequestInit): Promise<DeleteAreaInspectionResponse> => {
+  
+  return customFetch<DeleteAreaInspectionResponse>(getDeleteAreaInspectionAdminUrl(areaInspectionId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+
+
+
+
+export const getDeleteAreaInspectionAdminMutationOptions = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAreaInspectionAdmin>>, TError,{areaInspectionId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAreaInspectionAdmin>>, TError,{areaInspectionId: string}, TContext> => {
+
+const mutationKey = ['deleteAreaInspectionAdmin'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAreaInspectionAdmin>>, {areaInspectionId: string}> = (props) => {
+          const {areaInspectionId} = props ?? {};
+
+          return  deleteAreaInspectionAdmin(areaInspectionId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAreaInspectionAdminMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAreaInspectionAdmin>>>
+    
+    export type DeleteAreaInspectionAdminMutationError = ErrorResponse | ErrorResponse
+
+    export const useDeleteAreaInspectionAdmin = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAreaInspectionAdmin>>, TError,{areaInspectionId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAreaInspectionAdmin>>,
+        TError,
+        {areaInspectionId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteAreaInspectionAdminMutationOptions(options);
 
       return useMutation(mutationOptions , queryClient);
     }

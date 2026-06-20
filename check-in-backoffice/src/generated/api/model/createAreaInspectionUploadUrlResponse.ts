@@ -6,14 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * @nullable
- */
-export type WorkLocation = {
-  id: string;
-  name: string;
-  /** @nullable */
-  description: string | null;
-  isActive: boolean;
-  createdAt: string;
-} | null;
+export interface CreateAreaInspectionUploadUrlResponse {
+  pendingUploadId: string;
+  storagePath: string;
+  signedUploadUrl: string;
+  token?: string;
+  expiresAt: string;
+}

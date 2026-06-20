@@ -14,6 +14,19 @@ import {
   confirmAttendance,
   createAttendanceUploadUrl
 } from '../attendance/attendance.service.js'
+import {
+  AreaInspectionIdParamSchema,
+  AreaInspectionResponseSchema,
+  CreateAreaInspectionRequestSchema,
+  CreateAreaInspectionUploadUrlRequestSchema,
+  CreateAreaInspectionUploadUrlResponseSchema,
+  DeleteAreaInspectionResponseSchema
+} from '../area-inspection/area-inspection.schemas.js'
+import {
+  createAreaInspection,
+  createAreaInspectionUploadUrl,
+  deleteOwnAreaInspection
+} from '../area-inspection/area-inspection.service.js'
 import { permissions } from '../auth/permissions.js'
 import {
   CreateEmergencyRequestSchema,
@@ -169,6 +182,118 @@ mobileRoutes.openapi(checkOutRoute, async (c) => {
       c
     }),
     201
+  )
+})
+
+const createAreaInspectionUploadUrlRoute = createRoute({
+  method: 'post',
+  path: '/area-inspections/upload-url',
+  operationId: 'createAreaInspectionUploadUrl',
+  tags: ['Mobile'],
+  request: {
+    body: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: CreateAreaInspectionUploadUrlRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    201: {
+      description: 'Signed upload URL for an area inspection photo',
+      content: {
+        'application/json': {
+          schema: CreateAreaInspectionUploadUrlResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+mobileRoutes.openapi(createAreaInspectionUploadUrlRoute, async (c) => {
+  ensurePermission(c, permissions.mobileAttendance)
+  return c.json(
+    await createAreaInspectionUploadUrl({
+      userId: c.get('currentUser').id,
+      payload: c.req.valid('json')
+    }),
+    201
+  )
+})
+
+const createAreaInspectionRoute = createRoute({
+  method: 'post',
+  path: '/area-inspections',
+  operationId: 'createAreaInspection',
+  tags: ['Mobile'],
+  request: {
+    body: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: CreateAreaInspectionRequestSchema
+        }
+      }
+    }
+  },
+  responses: {
+    201: {
+      description: 'Area inspection created',
+      content: {
+        'application/json': {
+          schema: AreaInspectionResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+mobileRoutes.openapi(createAreaInspectionRoute, async (c) => {
+  ensurePermission(c, permissions.mobileAttendance)
+  return c.json(
+    await createAreaInspection({
+      userId: c.get('currentUser').id,
+      payload: c.req.valid('json'),
+      c
+    }),
+    201
+  )
+})
+
+const deleteAreaInspectionRoute = createRoute({
+  method: 'delete',
+  path: '/area-inspections/{areaInspectionId}',
+  operationId: 'deleteAreaInspection',
+  tags: ['Mobile'],
+  request: {
+    params: AreaInspectionIdParamSchema
+  },
+  responses: {
+    200: {
+      description: 'Area inspection deleted',
+      content: {
+        'application/json': {
+          schema: DeleteAreaInspectionResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+mobileRoutes.openapi(deleteAreaInspectionRoute, async (c) => {
+  ensurePermission(c, permissions.mobileAttendance)
+  return c.json(
+    await deleteOwnAreaInspection({
+      areaInspectionId: c.req.valid('param').areaInspectionId,
+      userId: c.get('currentUser').id,
+      c
+    }),
+    200
   )
 })
 

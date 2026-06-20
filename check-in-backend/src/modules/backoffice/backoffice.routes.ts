@@ -16,6 +16,16 @@ import {
   reviewAttendance
 } from '../attendance/attendance.service.js'
 import {
+  AreaInspectionIdParamSchema,
+  DeleteAreaInspectionResponseSchema,
+  ListAreaInspectionsQuerySchema,
+  ListAreaInspectionsResponseSchema
+} from '../area-inspection/area-inspection.schemas.js'
+import {
+  deleteAreaInspection,
+  listAreaInspections
+} from '../area-inspection/area-inspection.service.js'
+import {
   EmergencyLogIdParamSchema,
   EmergencyLogResponseSchema,
   ListEmergencyLogsQuerySchema,
@@ -741,6 +751,65 @@ backofficeRoutes.openapi(reviewAttendanceRoute, async (c) => {
       attendanceDayId,
       payload: c.req.valid('json'),
       reviewerId: c.get('currentUser').id,
+      c
+    }),
+    200
+  )
+})
+
+const listAreaInspectionsRoute = createRoute({
+  method: 'get',
+  path: '/area-inspections',
+  operationId: 'listAreaInspections',
+  tags: ['Backoffice'],
+  request: {
+    query: ListAreaInspectionsQuerySchema
+  },
+  responses: {
+    200: {
+      description: 'Area inspections list',
+      content: {
+        'application/json': {
+          schema: ListAreaInspectionsResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+backofficeRoutes.openapi(listAreaInspectionsRoute, async (c) => {
+  ensurePermission(c, permissions.attendanceRead)
+  return c.json(await listAreaInspections(c.req.valid('query')), 200)
+})
+
+const deleteAreaInspectionRoute = createRoute({
+  method: 'delete',
+  path: '/area-inspections/{areaInspectionId}',
+  operationId: 'deleteAreaInspectionAdmin',
+  tags: ['Backoffice'],
+  request: {
+    params: AreaInspectionIdParamSchema
+  },
+  responses: {
+    200: {
+      description: 'Area inspection deleted',
+      content: {
+        'application/json': {
+          schema: DeleteAreaInspectionResponseSchema
+        }
+      }
+    },
+    ...commonErrorResponses
+  }
+})
+
+backofficeRoutes.openapi(deleteAreaInspectionRoute, async (c) => {
+  ensurePermission(c, permissions.attendanceReview)
+  return c.json(
+    await deleteAreaInspection({
+      areaInspectionId: c.req.valid('param').areaInspectionId,
+      actorUserId: c.get('currentUser').id,
       c
     }),
     200

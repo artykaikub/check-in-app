@@ -11,6 +11,7 @@ const envSchema = z.object({
   RATE_LIMIT_POINTS: z.coerce.number().int().positive().default(120),
   RATE_LIMIT_DURATION_SECONDS: z.coerce.number().int().positive().default(60),
   ATTENDANCE_PHOTO_BUCKET: z.string().min(1).default('attendance-photos'),
+  AREA_INSPECTION_PHOTO_BUCKET: z.string().min(1).default('area-inspection-photos'),
   SALARY_UPLOAD_BUCKET: z.string().min(1).default('salary-uploads'),
   INTERNAL_API_SECRET: z.string().min(16).optional(),
   CRON_SECRET: z.string().min(16).optional(),

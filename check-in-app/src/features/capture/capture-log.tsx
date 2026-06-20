@@ -7,14 +7,19 @@ import {
   CameraCapture,
   type CapturedPhoto
 } from '@/components/shell/camera-capture'
-import { useListFrontendAttendance } from '@/generated/api/frontend/frontend'
-import { useCreateAttendanceUploadUrl } from '@/generated/api/mobile/mobile'
+import {
+  useGetFrontendProfile,
+  useListSiteAreaInspections
+} from '@/generated/api/frontend/frontend'
+import {
+  useCreateAreaInspection,
+  useCreateAreaInspectionUploadUrl,
+  useDeleteAreaInspection
+} from '@/generated/api/mobile/mobile'
 import type {
-  AttendanceDay,
-  AttendanceEvent,
-  CreateAttendanceUploadUrlRequestContentType
+  AreaInspection,
+  CreateAreaInspectionUploadUrlRequestContentType
 } from '@/generated/api/model'
-import { useGetFrontendProfile } from '@/generated/api/frontend/frontend'
 import { ApiError } from '@/lib/api/fetch-client'
 import { useI18n } from '@/lib/i18n/i18n-provider'
 import type { Lang } from '@/lib/i18n/dictionaries'
@@ -33,8 +38,10 @@ type LogEntry = {
   who: string
   whoInitials: string
   notes: string | null
-  /** Locally-created ad-hoc captures can be deleted within the window. */
-  deletable: boolean
+  /** True for the signed-in user's own entries (server- or locally-created). */
+  mine: boolean
+  /** Locally-created, not yet persisted — only removable client-side. */
+  local: boolean
 }
 
 const GRADIENTS = [
@@ -44,7 +51,7 @@ const GRADIENTS = [
   'linear-gradient(135deg,#6a5b7a,#42394d)'
 ]
 
-/** Ad-hoc captures can be deleted for 15 minutes after creation. */
+/** Staff can delete their own reports for 15 minutes after capture. */
 const DELETE_WINDOW_MS = 15 * 60 * 1000
 
 function pad(value: number): string {
@@ -78,7 +85,7 @@ function agoLabel(capturedAt: number, now: number, lang: Lang): string {
   return Math.floor(mins / 60) + (lang === 'th' ? ' ชม.ที่แล้ว' : 'h ago')
 }
 
-const CONTENT_TYPE_BY_MIME: Record<string, CreateAttendanceUploadUrlRequestContentType> =
+const CONTENT_TYPE_BY_MIME: Record<string, CreateAreaInspectionUploadUrlRequestContentType> =
   {
     'image/jpeg': 'image/jpeg',
     'image/png': 'image/png',
@@ -86,19 +93,19 @@ const CONTENT_TYPE_BY_MIME: Record<string, CreateAttendanceUploadUrlRequestConte
   }
 
 /**
- * CAPTURE LOG body (per the prototype `onCapture` block).
- *
- * The persisted log is derived from the signed-in employee's attendance
- * check-in / check-out photos ({@link useListFrontendAttendance}) — the real
- * source of captured imagery. Ad-hoc captures taken via the camera overlay are
- * uploaded best-effort through the attendance upload-url mechanism and shown
- * optimistically at the top of the list with a retention countdown.
+ * AREA INSPECTION ("ตรวจพื้นที่") log — a feature separate from attendance
+ * check-in photos. Staff capture ad-hoc site-condition reports; the log shows
+ * every report from everyone assigned to the same work site
+ * ({@link useListSiteAreaInspections}). The signed-in user may delete their own
+ * reports within a 15-minute window.
  */
 export function CaptureLog() {
   const { t, lang } = useI18n()
   const profile = useGetFrontendProfile()
-  const attendance = useListFrontendAttendance({ perPage: 30 })
-  const createUploadUrl = useCreateAttendanceUploadUrl()
+  const inspections = useListSiteAreaInspections({ perPage: 30 })
+  const createUploadUrl = useCreateAreaInspectionUploadUrl()
+  const createInspection = useCreateAreaInspection()
+  const deleteInspection = useDeleteAreaInspection()
 
   const [cameraOpen, setCameraOpen] = useState(false)
   const [adHoc, setAdHoc] = useState<LogEntry[]>([])
@@ -110,48 +117,44 @@ export function CaptureLog() {
     return () => window.clearInterval(id)
   }, [])
 
+  const myId = profile.data?.user.id ?? null
   const myName = profile.data?.user.fullName ?? (lang === 'th' ? 'พนักงาน' : 'Staff')
   const myInitials = initials(myName)
 
-  const attendanceEntries = useMemo<LogEntry[]>(() => {
-    const days = attendance.data?.attendanceDays ?? []
-    const entries: LogEntry[] = []
-    let gi = 0
-    const pushEvent = (day: AttendanceDay, ev: AttendanceEvent) => {
-      if (!ev) return
-      entries.push({
-        id: ev.id,
-        photoUrl: ev.photoUrl,
-        bg: GRADIENTS[gi++ % GRADIENTS.length],
-        gps: gpsLabel(ev.lat, ev.lng),
-        stamp: timeLabel(ev.capturedAt, lang),
-        capturedAt: new Date(ev.capturedAt).getTime(),
-        who: day.user?.fullName ?? myName,
-        whoInitials: initials(day.user?.fullName ?? myName),
-        notes: null,
-        deletable: false
-      })
-    }
-    for (const day of days) {
-      for (const ev of day.events) {
-        pushEvent(day, ev)
+  const siteEntries = useMemo<LogEntry[]>(() => {
+    const rows = inspections.data?.areaInspections ?? []
+    return rows.map((row: AreaInspection, index): LogEntry => {
+      const who = row.user?.fullName ?? (lang === 'th' ? 'พนักงาน' : 'Staff')
+      return {
+        id: row.id,
+        photoUrl: row.photoUrl,
+        bg: GRADIENTS[index % GRADIENTS.length],
+        gps: gpsLabel(row.lat, row.lng),
+        stamp: timeLabel(row.capturedAt, lang),
+        capturedAt: new Date(row.capturedAt).getTime(),
+        who,
+        whoInitials: initials(who),
+        notes: row.notes,
+        mine: row.user?.id != null && row.user.id === myId,
+        local: false
       }
-    }
-    entries.sort((a, b) => b.capturedAt - a.capturedAt)
-    return entries
-  }, [attendance.data, lang, myName])
+    })
+  }, [inspections.data, lang, myId])
 
   const entries = useMemo<LogEntry[]>(
-    () => [...adHoc, ...attendanceEntries],
-    [adHoc, attendanceEntries]
+    () => [...adHoc, ...siteEntries],
+    [adHoc, siteEntries]
   )
 
   const handleCapture = useCallback(
     async (photo: CapturedPhoto) => {
       const contentType = CONTENT_TYPE_BY_MIME[photo.blob.type] ?? 'image/jpeg'
-      // Optimistic local entry — shown immediately regardless of upload result.
+      const localId = `local-${Date.now()}`
+      const notes = photo.notes.trim() ? photo.notes.trim() : null
+      // Optimistic local entry — shown immediately, replaced by the server row
+      // once the report is persisted and the list refetches.
       const entry: LogEntry = {
-        id: `local-${Date.now()}`,
+        id: localId,
         photoUrl: photo.previewUrl,
         bg: GRADIENTS[Math.floor(Math.random() * GRADIENTS.length)],
         gps: gpsLabel(photo.lat, photo.lng),
@@ -159,44 +162,72 @@ export function CaptureLog() {
         capturedAt: photo.capturedAt.getTime(),
         who: myName,
         whoInitials: myInitials,
-        notes: photo.notes.trim() ? photo.notes.trim() : null,
-        deletable: true
+        notes,
+        mine: true,
+        local: true
       }
       setAdHoc((prev) => [entry, ...prev])
       setCameraOpen(false)
 
-      // Best-effort upload through the attendance upload-url mechanism.
       try {
-        const { signedUploadUrl } = await createUploadUrl.mutateAsync({
-          data: { type: 'CHECK_IN', contentType }
+        const { signedUploadUrl, pendingUploadId } = await createUploadUrl.mutateAsync({
+          data: { contentType }
         })
         await fetch(signedUploadUrl, {
           method: 'PUT',
           headers: { 'Content-Type': contentType },
           body: photo.blob
         })
+        await createInspection.mutateAsync({
+          data: {
+            pendingUploadId,
+            lat: photo.lat ?? null,
+            lng: photo.lng ?? null,
+            notes,
+            capturedAt: photo.capturedAt.toISOString()
+          }
+        })
+        // Drop the optimistic entry and pull the persisted, site-wide list.
+        setAdHoc((prev) => prev.filter((p) => p.id !== localId))
+        if (entry.photoUrl?.startsWith('blob:')) {
+          URL.revokeObjectURL(entry.photoUrl)
+        }
+        await inspections.refetch()
         toast.success(t.t_photo)
       } catch (error) {
-        const message = error instanceof ApiError ? error.message : t.t_photo
-        // Keep the optimistic entry; surface a soft notice.
-        toast.success(message)
+        // Keep the optimistic entry so the capture isn't lost from view; surface
+        // the failure so the user knows it wasn't saved.
+        const message = error instanceof ApiError ? error.message : t.login_failed
+        toast.error(message)
       }
     },
-    [createUploadUrl, myInitials, myName, t]
+    [createInspection, createUploadUrl, inspections, myInitials, myName, t]
   )
 
   const deleteEntry = useCallback(
-    (id: string) => {
-      setAdHoc((prev) => {
-        const target = prev.find((p) => p.id === id)
-        if (target?.photoUrl?.startsWith('blob:')) {
-          URL.revokeObjectURL(target.photoUrl)
-        }
-        return prev.filter((p) => p.id !== id)
-      })
-      toast.success(t.t_deleted)
+    async (entry: LogEntry) => {
+      if (entry.local) {
+        setAdHoc((prev) => {
+          const target = prev.find((p) => p.id === entry.id)
+          if (target?.photoUrl?.startsWith('blob:')) {
+            URL.revokeObjectURL(target.photoUrl)
+          }
+          return prev.filter((p) => p.id !== entry.id)
+        })
+        toast.success(t.t_deleted)
+        return
+      }
+
+      try {
+        await deleteInspection.mutateAsync({ areaInspectionId: entry.id })
+        await inspections.refetch()
+        toast.success(t.t_deleted)
+      } catch (error) {
+        const message = error instanceof ApiError ? error.message : t.login_failed
+        toast.error(message)
+      }
     },
-    [t]
+    [deleteInspection, inspections, t]
   )
 
   return (
@@ -266,7 +297,7 @@ export function CaptureLog() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
         {entries.map((ph) => {
           const ageMs = now - ph.capturedAt
-          const canDelete = ph.deletable && ageMs < DELETE_WINDOW_MS
+          const canDelete = ph.mine && ageMs < DELETE_WINDOW_MS
           const remainMin = Math.max(0, Math.ceil((DELETE_WINDOW_MS - ageMs) / 60000))
           return (
             <div
@@ -414,7 +445,8 @@ export function CaptureLog() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => deleteEntry(ph.id)}
+                      onClick={() => deleteEntry(ph)}
+                      disabled={deleteInspection.isPending}
                       style={{
                         fontSize: 11.5,
                         fontWeight: 600,
@@ -437,7 +469,7 @@ export function CaptureLog() {
           )
         })}
 
-        {entries.length === 0 && !attendance.isLoading && (
+        {entries.length === 0 && !inspections.isLoading && (
           <div
             style={{
               background: '#fff',

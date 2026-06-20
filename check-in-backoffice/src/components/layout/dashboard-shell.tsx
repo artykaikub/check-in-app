@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle,
   CalendarCheck,
+  Camera,
   CircleDollarSign,
   ClipboardList,
   LogOut,
@@ -53,6 +54,12 @@ const navigation = [
     labelKey: 'nav.attendance',
     href: '/dashboard/attendance',
     icon: CalendarCheck,
+    permission: permissions.attendanceRead
+  },
+  {
+    labelKey: 'nav.areaInspections',
+    href: '/dashboard/area-inspections',
+    icon: Camera,
     permission: permissions.attendanceRead
   },
   {

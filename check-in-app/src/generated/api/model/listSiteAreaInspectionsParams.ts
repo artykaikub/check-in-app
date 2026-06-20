@@ -6,14 +6,17 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export type ListSiteAreaInspectionsParams = {
 /**
- * @nullable
+ * @minimum 0
+ * @exclusiveMinimum
  */
-export type WorkLocation = {
-  id: string;
-  name: string;
-  /** @nullable */
-  description: string | null;
-  isActive: boolean;
-  createdAt: string;
-} | null;
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+perPage?: number;
+dateFrom?: string;
+dateTo?: string;
+};

@@ -9,11 +9,12 @@
 /**
  * @nullable
  */
-export type WorkLocation = {
+export type AreaInspectionUser = {
   id: string;
-  name: string;
   /** @nullable */
-  description: string | null;
-  isActive: boolean;
-  createdAt: string;
+  email: string | null;
+  /** @nullable */
+  fullName: string | null;
+  /** @nullable */
+  employeeCode: string | null;
 } | null;

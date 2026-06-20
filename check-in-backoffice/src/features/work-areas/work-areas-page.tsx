@@ -62,16 +62,22 @@ export function WorkAreasPage() {
     enabled: Boolean(selectedUserId)
   })
 
-  const activeLocations = useMemo(
-    () => locationsQuery.data?.workLocations.filter((location) => location.isActive) ?? [],
-    [locationsQuery.data?.workLocations]
-  )
-  const workLocationsById = useMemo(
+  // The shared WorkLocation schema is emitted as nullable (it is reused in a
+  // nullable response elsewhere), so drop any nulls before use.
+  const workLocations = useMemo(
     () =>
-      new Map(
-        (locationsQuery.data?.workLocations ?? []).map((location) => [location.id, location])
+      (locationsQuery.data?.workLocations ?? []).filter(
+        (location): location is NonNullable<typeof location> => location !== null
       ),
     [locationsQuery.data?.workLocations]
+  )
+  const activeLocations = useMemo(
+    () => workLocations.filter((location) => location.isActive),
+    [workLocations]
+  )
+  const workLocationsById = useMemo(
+    () => new Map(workLocations.map((location) => [location.id, location])),
+    [workLocations]
   )
   const savedWorkArea = workAreaQuery.data?.workArea ?? null
   const savedWorkLocation = savedWorkArea
@@ -182,7 +188,7 @@ export function WorkAreasPage() {
           {locationsQuery.isLoading ? <TableSkeleton rows={3} /> : null}
           {locationsQuery.isError ? <ErrorBanner error={locationsQuery.error} /> : null}
           {locationsQuery.data ? (
-            locationsQuery.data.workLocations.length > 0 ? (
+            workLocations.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -193,7 +199,7 @@ export function WorkAreasPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {locationsQuery.data.workLocations.map((location) => (
+                  {workLocations.map((location) => (
                     <TableRow key={location.id}>
                       <TableCell className="font-medium">{location.name}</TableCell>
                       <TableCell className="text-muted-foreground">

@@ -6,14 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * @nullable
- */
-export type WorkLocation = {
+export interface DeleteAreaInspectionResponse {
   id: string;
-  name: string;
-  /** @nullable */
-  description: string | null;
-  isActive: boolean;
-  createdAt: string;
-} | null;
+  deleted: boolean;
+}

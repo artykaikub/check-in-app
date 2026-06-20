@@ -659,6 +659,120 @@
           "createdAt"
         ]
       },
+      "ListAreaInspectionsResponse": {
+        "type": "object",
+        "properties": {
+          "areaInspections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AreaInspection"
+            }
+          },
+          "page": {
+            "type": "number"
+          },
+          "perPage": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "areaInspections",
+          "page",
+          "perPage",
+          "total"
+        ]
+      },
+      "AreaInspection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "email": {
+                "type": "string",
+                "nullable": true,
+                "format": "email"
+              },
+              "fullName": {
+                "type": "string",
+                "nullable": true
+              },
+              "employeeCode": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "fullName",
+              "employeeCode"
+            ]
+          },
+          "workLocationId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "workLocationName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lat": {
+            "type": "number",
+            "nullable": true
+          },
+          "lng": {
+            "type": "number",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "photoPath": {
+            "type": "string"
+          },
+          "photoUrl": {
+            "type": "string",
+            "nullable": true,
+            "format": "uri"
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "user",
+          "workLocationId",
+          "workLocationName",
+          "lat",
+          "lng",
+          "notes",
+          "photoPath",
+          "photoUrl",
+          "capturedAt",
+          "createdAt"
+        ]
+      },
       "FrontendWorkAreaResponse": {
         "type": "object",
         "properties": {
@@ -839,6 +953,114 @@
           "pendingUploadId",
           "lat",
           "lng"
+        ]
+      },
+      "CreateAreaInspectionUploadUrlResponse": {
+        "type": "object",
+        "properties": {
+          "pendingUploadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storagePath": {
+            "type": "string"
+          },
+          "signedUploadUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "token": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "pendingUploadId",
+          "storagePath",
+          "signedUploadUrl",
+          "expiresAt"
+        ]
+      },
+      "CreateAreaInspectionUploadUrlRequest": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ]
+          }
+        },
+        "required": [
+          "contentType"
+        ]
+      },
+      "AreaInspectionResponse": {
+        "type": "object",
+        "properties": {
+          "areaInspection": {
+            "$ref": "#/components/schemas/AreaInspection"
+          }
+        },
+        "required": [
+          "areaInspection"
+        ]
+      },
+      "CreateAreaInspectionRequest": {
+        "type": "object",
+        "properties": {
+          "pendingUploadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lat": {
+            "type": "number",
+            "nullable": true,
+            "minimum": -90,
+            "maximum": 90
+          },
+          "lng": {
+            "type": "number",
+            "nullable": true,
+            "minimum": -180,
+            "maximum": 180
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "pendingUploadId"
+        ]
+      },
+      "DeleteAreaInspectionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "deleted"
         ]
       },
       "CreateEmergencyResponse": {
@@ -2338,6 +2560,78 @@
         }
       }
     },
+    "/api/frontend/area-inspections": {
+      "get": {
+        "operationId": "listSiteAreaInspections",
+        "tags": [
+          "Frontend"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "required": false,
+            "name": "perPage",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "dateFrom",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "dateTo",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Area inspections for the caller's work site, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListAreaInspectionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/frontend/work-area": {
       "get": {
         "operationId": "getFrontendWorkArea",
@@ -2491,6 +2785,157 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ConfirmAttendanceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing required permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mobile/area-inspections/upload-url": {
+      "post": {
+        "operationId": "createAreaInspectionUploadUrl",
+        "tags": [
+          "Mobile"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAreaInspectionUploadUrlRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Signed upload URL for an area inspection photo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateAreaInspectionUploadUrlResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing required permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mobile/area-inspections": {
+      "post": {
+        "operationId": "createAreaInspection",
+        "tags": [
+          "Mobile"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAreaInspectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Area inspection created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AreaInspectionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing required permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mobile/area-inspections/{areaInspectionId}": {
+      "delete": {
+        "operationId": "deleteAreaInspection",
+        "tags": [
+          "Mobile"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "areaInspectionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Area inspection deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAreaInspectionResponse"
                 }
               }
             }
@@ -3551,6 +3996,157 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AttendanceDayResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing required permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backoffice/area-inspections": {
+      "get": {
+        "operationId": "listAreaInspections",
+        "tags": [
+          "Backoffice"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "required": false,
+            "name": "perPage",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "workLocationId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "userId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "dateFrom",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "dateTo",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Area inspections list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListAreaInspectionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing required permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backoffice/area-inspections/{areaInspectionId}": {
+      "delete": {
+        "operationId": "deleteAreaInspectionAdmin",
+        "tags": [
+          "Backoffice"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "areaInspectionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Area inspection deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAreaInspectionResponse"
                 }
               }
             }

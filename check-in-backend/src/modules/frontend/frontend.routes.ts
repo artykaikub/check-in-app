@@ -3,6 +3,11 @@ import { createRoute, OpenAPIHono } from '@hono/zod-openapi'
 import { requireAuth } from '../../middlewares/auth.js'
 import { ErrorResponseSchema } from '../../shared/schemas/common.js'
 import type { AppEnv } from '../../types/hono.js'
+import {
+  ListAreaInspectionsResponseSchema,
+  ListSiteAreaInspectionsQuerySchema
+} from '../area-inspection/area-inspection.schemas.js'
+import { listSiteAreaInspections } from '../area-inspection/area-inspection.service.js'
 import { mapProfile } from '../auth/auth.service.js'
 import {
   CreateCheckInResponseSchema,
@@ -169,6 +174,44 @@ const listPayslipsRoute = createRoute({
 frontendRoutes.openapi(listPayslipsRoute, async (c) => {
   return c.json(
     await listOwnPayslips({
+      userId: c.get('currentUser').id,
+      query: c.req.valid('query')
+    }),
+    200
+  )
+})
+
+const listAreaInspectionsRoute = createRoute({
+  method: 'get',
+  path: '/area-inspections',
+  operationId: 'listSiteAreaInspections',
+  tags: ['Frontend'],
+  request: {
+    query: ListSiteAreaInspectionsQuerySchema
+  },
+  responses: {
+    200: {
+      description: "Area inspections for the caller's work site, newest first",
+      content: {
+        'application/json': {
+          schema: ListAreaInspectionsResponseSchema
+        }
+      }
+    },
+    401: {
+      description: 'Missing or invalid access token',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema
+        }
+      }
+    }
+  }
+})
+
+frontendRoutes.openapi(listAreaInspectionsRoute, async (c) => {
+  return c.json(
+    await listSiteAreaInspections({
       userId: c.get('currentUser').id,
       query: c.req.valid('query')
     }),

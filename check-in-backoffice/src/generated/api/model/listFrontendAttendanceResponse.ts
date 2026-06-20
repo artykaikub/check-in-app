@@ -5,15 +5,11 @@
  * Check-in backend API for shared auth, frontend, and backoffice clients.
  * OpenAPI spec version: 0.1.0
  */
+import type { AttendanceDay } from './attendanceDay';
 
-/**
- * @nullable
- */
-export type WorkLocation = {
-  id: string;
-  name: string;
-  /** @nullable */
-  description: string | null;
-  isActive: boolean;
-  createdAt: string;
-} | null;
+export interface ListFrontendAttendanceResponse {
+  attendanceDays: AttendanceDay[];
+  page: number;
+  perPage: number;
+  total: number;
+}

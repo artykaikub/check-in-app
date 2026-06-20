@@ -16,12 +16,17 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AreaInspectionResponse,
   ConfirmAttendanceRequest,
   ConfirmAttendanceResponse,
+  CreateAreaInspectionRequest,
+  CreateAreaInspectionUploadUrlRequest,
+  CreateAreaInspectionUploadUrlResponse,
   CreateAttendanceUploadUrlRequest,
   CreateAttendanceUploadUrlResponse,
   CreateEmergencyRequest,
   CreateEmergencyResponse,
+  DeleteAreaInspectionResponse,
   ErrorResponse
 } from '.././model';
 
@@ -239,6 +244,218 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       > => {
 
       const mutationOptions = getCheckOutMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    export const getCreateAreaInspectionUploadUrlUrl = () => {
+
+
+  
+
+  return `/api/mobile/area-inspections/upload-url`
+}
+
+export const createAreaInspectionUploadUrl = async (createAreaInspectionUploadUrlRequest: CreateAreaInspectionUploadUrlRequest, options?: RequestInit): Promise<CreateAreaInspectionUploadUrlResponse> => {
+  
+  const res = await fetch(getCreateAreaInspectionUploadUrlUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createAreaInspectionUploadUrlRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: CreateAreaInspectionUploadUrlResponse = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+
+
+export const getCreateAreaInspectionUploadUrlMutationOptions = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAreaInspectionUploadUrl>>, TError,{data: CreateAreaInspectionUploadUrlRequest}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof createAreaInspectionUploadUrl>>, TError,{data: CreateAreaInspectionUploadUrlRequest}, TContext> => {
+
+const mutationKey = ['createAreaInspectionUploadUrl'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAreaInspectionUploadUrl>>, {data: CreateAreaInspectionUploadUrlRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAreaInspectionUploadUrl(data,fetchOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAreaInspectionUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof createAreaInspectionUploadUrl>>>
+    export type CreateAreaInspectionUploadUrlMutationBody = CreateAreaInspectionUploadUrlRequest
+    export type CreateAreaInspectionUploadUrlMutationError = ErrorResponse | ErrorResponse
+
+    export const useCreateAreaInspectionUploadUrl = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAreaInspectionUploadUrl>>, TError,{data: CreateAreaInspectionUploadUrlRequest}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createAreaInspectionUploadUrl>>,
+        TError,
+        {data: CreateAreaInspectionUploadUrlRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateAreaInspectionUploadUrlMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    export const getCreateAreaInspectionUrl = () => {
+
+
+  
+
+  return `/api/mobile/area-inspections`
+}
+
+export const createAreaInspection = async (createAreaInspectionRequest: CreateAreaInspectionRequest, options?: RequestInit): Promise<AreaInspectionResponse> => {
+  
+  const res = await fetch(getCreateAreaInspectionUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createAreaInspectionRequest,)
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: AreaInspectionResponse = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+
+
+export const getCreateAreaInspectionMutationOptions = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAreaInspection>>, TError,{data: CreateAreaInspectionRequest}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof createAreaInspection>>, TError,{data: CreateAreaInspectionRequest}, TContext> => {
+
+const mutationKey = ['createAreaInspection'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAreaInspection>>, {data: CreateAreaInspectionRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAreaInspection(data,fetchOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAreaInspectionMutationResult = NonNullable<Awaited<ReturnType<typeof createAreaInspection>>>
+    export type CreateAreaInspectionMutationBody = CreateAreaInspectionRequest
+    export type CreateAreaInspectionMutationError = ErrorResponse | ErrorResponse
+
+    export const useCreateAreaInspection = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAreaInspection>>, TError,{data: CreateAreaInspectionRequest}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createAreaInspection>>,
+        TError,
+        {data: CreateAreaInspectionRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateAreaInspectionMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    export const getDeleteAreaInspectionUrl = (areaInspectionId: string,) => {
+
+
+  
+
+  return `/api/mobile/area-inspections/${areaInspectionId}`
+}
+
+export const deleteAreaInspection = async (areaInspectionId: string, options?: RequestInit): Promise<DeleteAreaInspectionResponse> => {
+  
+  const res = await fetch(getDeleteAreaInspectionUrl(areaInspectionId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+)
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  
+  const data: DeleteAreaInspectionResponse = body ? JSON.parse(body) : {}
+  return data
+}
+
+
+
+
+export const getDeleteAreaInspectionMutationOptions = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAreaInspection>>, TError,{areaInspectionId: string}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAreaInspection>>, TError,{areaInspectionId: string}, TContext> => {
+
+const mutationKey = ['deleteAreaInspection'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAreaInspection>>, {areaInspectionId: string}> = (props) => {
+          const {areaInspectionId} = props ?? {};
+
+          return  deleteAreaInspection(areaInspectionId,fetchOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAreaInspectionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAreaInspection>>>
+    
+    export type DeleteAreaInspectionMutationError = ErrorResponse | ErrorResponse
+
+    export const useDeleteAreaInspection = <TError = ErrorResponse | ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAreaInspection>>, TError,{areaInspectionId: string}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAreaInspection>>,
+        TError,
+        {areaInspectionId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteAreaInspectionMutationOptions(options);
 
       return useMutation(mutationOptions , queryClient);
     }

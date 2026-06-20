@@ -3,8 +3,10 @@ import {
   getCreateBackofficeUserUrl,
   getCreateSalaryUploadUrlUrl,
   getCreateWorkLocationUrl,
+  getDeleteAreaInspectionAdminUrl,
   getDeleteSalaryRecordUrl,
   getDeleteSalaryUploadUrl,
+  getListAreaInspectionsUrl,
   getGetAttendanceDayUrl,
   getGetEmergencyLogUrl,
   getGetUserEffectivePermissionsUrl,
@@ -32,6 +34,9 @@ import {
 import type {
   AttendanceDayResponse,
   BackofficeUserResponse,
+  DeleteAreaInspectionResponse,
+  ListAreaInspectionsParams,
+  ListAreaInspectionsResponse,
   CreateBackofficeUserRequest,
   CreateSalaryUploadUrlRequest,
   CreateSalaryUploadUrlResponse,
@@ -164,6 +169,19 @@ export function reviewAttendance(attendanceDayId: string, payload: ReviewAttenda
     method: 'PATCH',
     body: payload
   })
+}
+
+export function listAreaInspections(params: ListAreaInspectionsParams = {}) {
+  return fetchJson<ListAreaInspectionsResponse>(getListAreaInspectionsUrl(params))
+}
+
+export function deleteAreaInspection(areaInspectionId: string) {
+  return fetchJson<DeleteAreaInspectionResponse>(
+    getDeleteAreaInspectionAdminUrl(areaInspectionId),
+    {
+      method: 'DELETE'
+    }
+  )
 }
 
 export function listEmergencyLogs(params: ListEmergencyLogsParams = {}) {

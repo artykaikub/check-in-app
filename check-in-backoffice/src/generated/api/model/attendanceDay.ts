@@ -20,5 +20,6 @@ export interface AttendanceDay {
   reviewNote: string | null;
   checkIn: AttendanceEvent;
   checkOut: AttendanceEvent;
+  events: AttendanceEvent[];
   createdAt: string;
 }

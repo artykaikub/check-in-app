@@ -30,10 +30,12 @@ import type {
   ErrorResponse,
   FrontendProfileResponse,
   FrontendWorkAreaResponse,
+  ListAreaInspectionsResponse,
   ListFrontendAttendanceParams,
   ListFrontendAttendanceResponse,
   ListFrontendPayslipsParams,
-  ListFrontendPayslipsResponse
+  ListFrontendPayslipsResponse,
+  ListSiteAreaInspectionsParams
 } from '.././model';
 
 import { customFetch } from '../../../lib/api/fetch-client';
@@ -379,6 +381,102 @@ export function useListFrontendPayslips<TData = Awaited<ReturnType<typeof listFr
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListFrontendPayslipsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+export const getListSiteAreaInspectionsUrl = (params?: ListSiteAreaInspectionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/frontend/area-inspections?${stringifiedParams}` : `/api/frontend/area-inspections`
+}
+
+export const listSiteAreaInspections = async (params?: ListSiteAreaInspectionsParams, options?: RequestInit): Promise<ListAreaInspectionsResponse> => {
+  
+  return customFetch<ListAreaInspectionsResponse>(getListSiteAreaInspectionsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+export const getListSiteAreaInspectionsQueryKey = (params?: ListSiteAreaInspectionsParams,) => {
+    return [`/api/frontend/area-inspections`, ...(params ? [params]: [])] as const;
+    }
+
+    
+export const getListSiteAreaInspectionsQueryOptions = <TData = Awaited<ReturnType<typeof listSiteAreaInspections>>, TError = ErrorResponse>(params?: ListSiteAreaInspectionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSiteAreaInspections>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSiteAreaInspectionsQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSiteAreaInspections>>> = ({ signal }) => listSiteAreaInspections(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn,   staleTime: 30000, refetchOnWindowFocus: false,  ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSiteAreaInspections>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListSiteAreaInspectionsQueryResult = NonNullable<Awaited<ReturnType<typeof listSiteAreaInspections>>>
+export type ListSiteAreaInspectionsQueryError = ErrorResponse
+
+
+export function useListSiteAreaInspections<TData = Awaited<ReturnType<typeof listSiteAreaInspections>>, TError = ErrorResponse>(
+ params: undefined |  ListSiteAreaInspectionsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSiteAreaInspections>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSiteAreaInspections>>,
+          TError,
+          Awaited<ReturnType<typeof listSiteAreaInspections>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListSiteAreaInspections<TData = Awaited<ReturnType<typeof listSiteAreaInspections>>, TError = ErrorResponse>(
+ params?: ListSiteAreaInspectionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSiteAreaInspections>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSiteAreaInspections>>,
+          TError,
+          Awaited<ReturnType<typeof listSiteAreaInspections>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListSiteAreaInspections<TData = Awaited<ReturnType<typeof listSiteAreaInspections>>, TError = ErrorResponse>(
+ params?: ListSiteAreaInspectionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSiteAreaInspections>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListSiteAreaInspections<TData = Awaited<ReturnType<typeof listSiteAreaInspections>>, TError = ErrorResponse>(
+ params?: ListSiteAreaInspectionsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSiteAreaInspections>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListSiteAreaInspectionsQueryOptions(params,options)
 
   const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
