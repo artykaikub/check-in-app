@@ -1,2 +1,3 @@
 # Supabase CLI local state (machine-specific)
 supabase/.temp/
+.vercel
