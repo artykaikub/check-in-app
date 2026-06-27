@@ -1,5 +1,7 @@
 'use client'
 
+import { PinchZoomPan } from './pinch-zoom-pan'
+
 /**
  * Device frame.
  *
@@ -19,7 +21,10 @@ export function DeviceFrame({ children }: { children: React.ReactNode }) {
           {/* id used as a portal target for full-screen overlays (e.g. camera)
               so they cover the whole screen but stay inside the device frame. */}
           <div id="trinity-frame-content" className="device-frame-content">
-            {children}
+            {/* pinch-to-zoom + pan over the whole app, like browser zoom.
+                Full-screen overlays portal into #trinity-frame-content above,
+                so they stay at 1× outside this transform. */}
+            <PinchZoomPan>{children}</PinchZoomPan>
           </div>
         </div>
       </div>
