@@ -45,14 +45,15 @@ The work area map uses Leaflet with OpenStreetMap tiles. No paid map API key is 
 
 ## Vercel Projects
 
-Use two Vercel projects from the same GitHub repository:
+Use three Vercel projects from the same GitHub repository:
 
 - Backend project: Root Directory is `check-in-backend`. It uses `check-in-backend/vercel.json`.
 - Backoffice project: Root Directory is `check-in-backoffice`. It uses `check-in-backoffice/vercel.json`.
+- Staff PWA project: Root Directory is `check-in-app`. It uses `check-in-app/vercel.json`.
 
-Do not create a third/root Vercel project for the repository root. The repository root intentionally has no `vercel.json`; Vercel should have exactly two projects connected to this Git repository: one backend project and one backoffice project.
+Do not create a root Vercel project for the repository root. The repository root intentionally has no `vercel.json`; Vercel should have exactly three projects connected to this Git repository: one backend project, one backoffice project, and one staff PWA project.
 
-When you push to GitHub, Vercel will create deployments for both connected projects. The backend project receives the API URL, and the backoffice project must point `NEXT_PUBLIC_API_BASE_URL` to that backend URL.
+When you push to GitHub, Vercel will create deployments for all connected projects. The backend project receives the API URL, and both frontend projects must point `NEXT_PUBLIC_API_BASE_URL` to that backend URL. Add both frontend production URLs to the backend `CORS_ORIGINS`.
 
 The backend `check-in-backend/vercel.json` includes a daily retention cleanup cron at `0 20 * * *` UTC, which is 03:00 Asia/Bangkok.
 
@@ -70,11 +71,16 @@ Backend Vercel env vars:
 - `RATE_LIMIT_POINTS`
 - `RATE_LIMIT_DURATION_SECONDS`
 - `ATTENDANCE_PHOTO_BUCKET`
+- `AREA_INSPECTION_PHOTO_BUCKET`
 - `SALARY_UPLOAD_BUCKET`
 - `INTERNAL_API_SECRET`
 - `CRON_SECRET`
 
 Backoffice Vercel env vars:
+
+- `NEXT_PUBLIC_API_BASE_URL`
+
+Staff PWA Vercel env vars:
 
 - `NEXT_PUBLIC_API_BASE_URL`
 
