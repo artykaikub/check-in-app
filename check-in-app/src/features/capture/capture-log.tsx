@@ -1,7 +1,8 @@
 'use client'
 
-import { Camera, Clock, MapPin, Trash2, Users } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Camera, Clock, MapPin, Trash2, Users, X } from 'lucide-react'
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import {
   CameraCapture,
@@ -78,6 +79,16 @@ function timeLabel(iso: string | number, lang: Lang): string {
   })
 }
 
+function dateTimeLabel(capturedAt: number, lang: Lang): string {
+  return new Date(capturedAt).toLocaleString(lang === 'th' ? 'th-TH' : 'en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
 function agoLabel(capturedAt: number, now: number, lang: Lang): string {
   const mins = Math.floor((now - capturedAt) / 60000)
   if (mins < 1) return lang === 'th' ? 'เมื่อสักครู่' : 'just now'
@@ -91,6 +102,200 @@ const CONTENT_TYPE_BY_MIME: Record<string, CreateAreaInspectionUploadUrlRequestC
     'image/png': 'image/png',
     'image/webp': 'image/webp'
   }
+
+function DetailRow({
+  icon,
+  label,
+  value
+}: {
+  icon: ReactNode
+  label: string
+  value: string
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span style={{ color: 'var(--trinity-mfg2)', display: 'inline-flex' }}>{icon}</span>
+      <span style={{ fontSize: 12.5, color: 'var(--trinity-mfg2)', width: 72 }}>{label}</span>
+      <span
+        style={{
+          fontSize: 13,
+          color: 'var(--trinity-fg)',
+          fontVariantNumeric: 'tabular-nums',
+          flex: 1
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * Full-screen detail for a tapped area-inspection report: large photo plus
+ * who/when/where and notes. Portals into the device frame so it covers the whole
+ * screen (above the shell chrome), matching the camera overlay convention.
+ */
+function InspectionDetail({
+  entry,
+  lang,
+  onClose
+}: {
+  entry: LogEntry
+  lang: Lang
+  onClose: () => void
+}) {
+  // Detail only mounts after a tap (client-side), so the frame target exists.
+  const target =
+    typeof document === 'undefined'
+      ? null
+      : (document.getElementById('trinity-frame-content') ?? document.body)
+
+  if (!target) return null
+
+  const L = (th: string, en: string) => (lang === 'th' ? th : en)
+
+  const overlay = (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 90,
+        background: 'rgba(8,12,20,.55)',
+        display: 'flex',
+        flexDirection: 'column',
+        animation: 'rm-fade .2s ease'
+      }}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label={L('ปิด', 'Close')}
+        style={{
+          position: 'absolute',
+          top: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+          right: 16,
+          width: 38,
+          height: 38,
+          borderRadius: '50%',
+          background: 'rgba(0,0,0,.5)',
+          border: 'none',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          zIndex: 1
+        }}
+      >
+        <X size={20} />
+      </button>
+
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          marginTop: 'auto',
+          background: '#fff',
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          overflow: 'hidden',
+          animation: 'rm-sheet .25s ease',
+          maxHeight: '90%',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <div
+          style={{
+            background: entry.bg,
+            width: '100%',
+            aspectRatio: '4 / 3',
+            position: 'relative',
+            flex: 'none'
+          }}
+        >
+          {entry.photoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={entry.photoUrl}
+              alt=""
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+            />
+          )}
+        </div>
+
+        <div
+          style={{
+            padding: '16px 18px 28px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+            overflowY: 'auto'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: '50%',
+                background: 'var(--trinity-primary-l)',
+                color: 'var(--trinity-primary)',
+                fontSize: 12,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {entry.whoInitials}
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 600 }}>{entry.who}</div>
+          </div>
+
+          <DetailRow
+            icon={<Clock size={15} />}
+            label={L('เวลา', 'Captured')}
+            value={dateTimeLabel(entry.capturedAt, lang)}
+          />
+          <DetailRow
+            icon={<MapPin size={15} />}
+            label={L('พิกัด', 'Location')}
+            value={entry.gps}
+          />
+
+          {entry.notes ? (
+            <div style={{ borderTop: '1px solid var(--trinity-muted)', paddingTop: 12 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: 'var(--trinity-mfg2)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '.4px',
+                  marginBottom: 6
+                }}
+              >
+                {L('บันทึก', 'Notes')}
+              </div>
+              <div style={{ fontSize: 13.5, color: '#334155', lineHeight: '20px' }}>
+                {entry.notes}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+
+  return createPortal(overlay, target)
+}
 
 /**
  * AREA INSPECTION ("ตรวจพื้นที่") log — a feature separate from attendance
@@ -110,6 +315,8 @@ export function CaptureLog() {
   const [cameraOpen, setCameraOpen] = useState(false)
   const [adHoc, setAdHoc] = useState<LogEntry[]>([])
   const [now, setNow] = useState(() => Date.now())
+  // The report whose detail overlay is open (tap a log card to inspect).
+  const [detail, setDetail] = useState<LogEntry | null>(null)
 
   // Keep relative timestamps / delete windows fresh.
   useEffect(() => {
@@ -302,11 +509,15 @@ export function CaptureLog() {
           return (
             <div
               key={ph.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => setDetail(ph)}
               style={{
                 background: '#fff',
                 border: '1px solid var(--trinity-border)',
                 borderRadius: 8,
-                overflow: 'hidden'
+                overflow: 'hidden',
+                cursor: 'pointer'
               }}
             >
               <div
@@ -445,7 +656,10 @@ export function CaptureLog() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => deleteEntry(ph)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteEntry(ph)
+                      }}
                       disabled={deleteInspection.isPending}
                       style={{
                         fontSize: 11.5,
@@ -491,6 +705,10 @@ export function CaptureLog() {
         onClose={() => setCameraOpen(false)}
         onCapture={handleCapture}
       />
+
+      {detail ? (
+        <InspectionDetail entry={detail} lang={lang} onClose={() => setDetail(null)} />
+      ) : null}
     </div>
   )
 }

@@ -161,6 +161,19 @@
   --trinity-radius: 8px;
 }
 
+/* Lock the document to the viewport so ONLY the in-app scroll region
+   (.rm-scroll, between the header and bottom nav) scrolls. Without this, iOS
+   rubber-band/overscroll drags the whole shell — pulling the fixed top header
+   and bottom nav off-screen when the content list is scrolled. */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  /* Avoid double-tap zoom / delayed taps, keep native-app feel. */
+  touch-action: manipulation;
+}
+
 /* Hide scrollbars inside the app frame (prototype .rm-scroll). */
 .rm-scroll {
   scrollbar-width: none;
