@@ -314,7 +314,11 @@ export async function listAreaInspections(query: ListAreaInspectionsQuery) {
 /**
  * Site-scoped list for staff: returns every area inspection captured at the
  * caller's active work location, so everyone on the same site sees them all.
- * Returns an empty page when the caller has no active work location.
+ *
+ * When the caller has no active work location, their captures are stored with a
+ * null work_location_id (which can never match a site filter), so we fall back
+ * to scoping by the caller's own reports — otherwise a report would vanish from
+ * the author's own log the moment it is saved, even though it persisted.
  */
 export async function listSiteAreaInspections(input: {
   userId: string
@@ -323,12 +327,13 @@ export async function listSiteAreaInspections(input: {
   const workLocationId = await getActiveWorkLocationId(input.userId)
 
   if (!workLocationId) {
-    return {
-      areaInspections: [],
+    return listAreaInspections({
       page: input.query.page,
       perPage: input.query.perPage,
-      total: 0
-    }
+      userId: input.userId,
+      dateFrom: input.query.dateFrom,
+      dateTo: input.query.dateTo
+    })
   }
 
   return listAreaInspections({
